@@ -1,0 +1,12 @@
+require "scripts.out"
+
+function init(self)
+	self.script = MainUI()
+	self.script:AssignProperties(self)
+	self.script:init()
+end
+
+function on_message(self, message, sender)
+	self.script:on_message(message, sender)
+end
+

@@ -1,0 +1,16 @@
+require "scripts.out"
+
+function init(self)
+	self.script = Player()
+	self.script:AssignProperties(self)
+	self.script:init()
+end
+
+function update(self, dt)
+	self.script:update(dt)
+end
+
+function on_input(self, action_id, action)
+	return self.script:on_input(action_id, action)
+end
+

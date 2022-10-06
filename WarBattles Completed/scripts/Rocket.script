@@ -1,0 +1,16 @@
+require "scripts.out"
+go.property("Direction", vmath.vector3())
+
+function init(self)
+	self.script = Rocket()
+	self.script:AssignProperties(self)
+end
+
+function update(self, dt)
+	self.script:update(dt)
+end
+
+function on_message(self, message, sender)
+	self.script:on_message(message, sender)
+end
+
