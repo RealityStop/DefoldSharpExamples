@@ -5,8 +5,8 @@ using types;
 
 public class Player : GameObjectScript
 {
-	private readonly Vector3 _input = new Vector3();
-	private Vector3 _movementDirection = new Vector3(0, -1, 0);
+	private readonly Vector2 _input = new Vector2();
+	private Vector2 _movementDirection = new Vector2(0, -1);
 	private bool _moving;
 	private bool _firing;
 	private readonly float _speed = 50;

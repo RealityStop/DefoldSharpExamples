@@ -1,7 +1,9 @@
-﻿namespace support
+﻿using attributes;
+
+namespace support
 {
 	[DoNotGenerate]
-	public class ScriptPropertyHost<TProps> : GeneratedScript where TProps : AnimatableProperties
+	public class ScriptPropertyHost<TProps> : GeneratedScript  where TProps : AnimatableProperties
 	{
 		protected TProps Properties { get; private set; }
 

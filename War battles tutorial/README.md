@@ -157,9 +157,9 @@ protected override bool on_input(Hash action_id, object action)
 }
 ```
 
-If we add a `using types;`, we add access to the DefoldSharp OOP API, allowing us to create a `Vector3` and record the user input:
+If we add a `using types;`, we add access to the DefoldSharp OOP API, allowing us to create a `Vector2` and record the user input:
  ```C#
-private Vector3 _input = new Vector3();  
+private Vector2 _input = new Vector2();  
 protected override bool on_input(Hash action_id, object action)  
 {  
 	if (action_id == Defold.hash("up"))  
@@ -198,9 +198,9 @@ public static class CommonInput
 Then we can use these cached Hashes in our Player script.  We'll also take this opportunity to record the movement we want from the input as a vector with length 1 (so diagonal movement isn't faster than cardinal direction movement):
 
 ```C#
-private Vector3 _movementDirection = new Vector3(0,-1,0);  
+private Vector2 _movementDirection = new Vector2(0,-1,0);  
 private bool _moving;  
-private Vector3 _input = new Vector3();  
+private Vector2 _input = new Vector2();  
 protected override bool on_input(Hash action_id, object action)  
 {  
 	if (action_id == CommonInput.Up)  
@@ -243,8 +243,8 @@ using types;
 
 public class Player : GameObjectScript
 {
-	private readonly Vector3 _input = new Vector3();
-	private Vector3 _movementDirection = new Vector3(0, -1, 0);
+	private readonly Vector2 _input = new Vector2();
+	private Vector2 _movementDirection = new Vector2(0, -1, 0);
 	private bool _moving;
 	private readonly float _speed = 50;
 
@@ -381,7 +381,7 @@ using types;
 public class Rocket : GameObjectScript
 {
 	private float _speed = 200;
-	private Vector3 _movementDirection = new Vector(0,1,0);
+	private Vector2 _movementDirection = new Vector(0,1,0);
 
 	protected override void update(float dt)
 	{
@@ -397,7 +397,7 @@ To do this in DefoldSharp, we have to define a class to hold all Defold componen
 ```C#
 public class RocketProperties : AnimatableProperties  
 {  
-  public Vector3 Direction;  
+  public Vector2 Direction;  
 }
 ```
 
@@ -416,7 +416,7 @@ using types;
 
 public class RocketProperties : AnimatableProperties
 {
-	public Vector3 Direction;
+	public Vector2 Direction;
 }
 
 public class Rocket : GameObjectScript<RocketProperties>
@@ -600,7 +600,7 @@ and now we can call that instead in the update and as a response to the collisio
 
 	public class RocketProperties : AnimatableProperties
 	{
-		public Vector3 Direction = new Vector3();
+		public Vector2 Direction = new Vector2();
 	}
 
 	public class Rocket : GameObjectScript<RocketProperties>

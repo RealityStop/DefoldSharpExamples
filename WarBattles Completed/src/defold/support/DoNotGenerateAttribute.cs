@@ -2,8 +2,9 @@
 
 namespace support
 {
-	[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+	[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 	public class DoNotGenerateAttribute : Attribute
 	{
+		
 	}
 }

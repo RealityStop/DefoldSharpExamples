@@ -1,7 +1,7 @@
 namespace types
 {
 	/// <summary>
-	///     @CSharpLua.Ignore
+	/// @CSharpLua.Ignore
 	/// </summary>
 	public abstract class LuaTableBase : ILuaTable
 	{

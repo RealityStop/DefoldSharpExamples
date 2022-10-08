@@ -1,7 +1,7 @@
 namespace types
 {
 	/// <summary>
-	///     @CSharpLua.Ignore
+	/// @CSharpLua.Ignore
 	/// </summary>
 	public class Vector2
 	{
@@ -9,91 +9,141 @@ namespace types
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.vector3()"
+		/// @CSharpLua.Template = "vmath.vector3()"
 		/// </summary>
 		public extern Vector2();
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.vector3({0},{1},0)"
+		/// @CSharpLua.Template = "vmath.vector3({0},{1},0)"
 		/// </summary>
 		public extern Vector2(float x, float y);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} + {1}"
+		/// @CSharpLua.Template = "{0} + {1}"
 		/// </summary>
 		public static extern Vector2 operator +(Vector2 a, Vector2 b);
+		
+		
+		/// <summary>
+		/// @CSharpLua.Template = "{0} + {1}"
+		/// </summary>
+		public static extern Vector2 operator +(Vector2 a, Vector3 b);
+		
+		
+		/// <summary>
+		/// @CSharpLua.Template = "{0} + {1}"
+		/// </summary>
+		public static extern Vector2 operator +(Vector3 a, Vector2 b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} - {1}"
+		/// @CSharpLua.Template = "{0} - {1}"
 		/// </summary>
 		public static extern Vector2 operator -(Vector2 a, Vector2 b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "-{0}"
+		/// @CSharpLua.Template = "{0} - {1}"
+		/// </summary>
+		public static extern Vector2 operator -(Vector2 a, Vector3 b);
+
+
+		/// <summary>
+		/// @CSharpLua.Template = "{0} - {1}"
+		/// </summary>
+		public static extern Vector2 operator -(Vector3 a, Vector2 b);
+		
+		
+		/// <summary>
+		/// @CSharpLua.Template = "-{0}"
 		/// </summary>
 		public static extern Vector2 neg(Vector2 a);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} * {1}"
+		/// @CSharpLua.Template = "{0} * {1}"
 		/// </summary>
 		public static extern Vector2 operator *(Vector2 a, float b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} * {1}"
+		/// @CSharpLua.Template = "{0} * {1}"
 		/// </summary>
 		public static extern Vector2 operator *(float a, Vector2 b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} * {1}"
+		/// @CSharpLua.Template = "{0} * {1}"
 		/// </summary>
 		public static extern Vector2 operator *(Vector2 a, Vector2 b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} / {1}"
+		/// @CSharpLua.Template = "{0} * {1}"
+		/// </summary>
+		public static extern Vector2 operator *(Vector2 a, Vector3 b);
+		
+
+		/// <summary>
+		/// @CSharpLua.Template = "{0} * {1}"
+		/// </summary>
+		public static extern Vector2 operator *(Vector3 a, Vector2 b);
+		
+
+		/// <summary>
+		/// @CSharpLua.Template = "{0} / {1}"
 		/// </summary>
 		public static extern Vector2 operator /(Vector2 a, float b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.length({this})"
+		/// @CSharpLua.Template = "vmath.length({this})"
 		/// </summary>
-		public static extern float Magnitude();
+		public extern float Magnitude();
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.mul_per_elem({this},{0})"
+		/// @CSharpLua.Template = "vmath.mul_per_elem({this},{0})"
 		/// </summary>
-		public extern Vector3 MultiplyByElement(Vector3 other);
+		public extern Vector2 MultiplyByElement(Vector2 other);
+
+		
+		/// <summary>
+		/// @CSharpLua.Template = "vmath.mul_per_elem({this},{0})"
+		/// </summary>
+		public extern Vector2 MultiplyByElement(Vector3 other);
+		
+
+		/// <summary>
+		/// @CSharpLua.Template = "vmath.normalize({this})"
+		/// </summary>
+		public extern Vector2 Normalize();
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.normalize({this})"
-		/// </summary>
-		public extern Vector3 Normalize();
-
-
-		/// <summary>
-		///     @CSharpLua.Template = "vmath.project({this},{0})"
+		/// @CSharpLua.Template = "vmath.project({this},{0})"
 		/// </summary>
 		public extern float Project(Vector2 v);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.project({this},{0})"
+		/// @CSharpLua.Template = "vmath.project({this},{0})"
 		/// </summary>
 		public extern float Project(Vector3 v);
 
+		/// <summary>
+		/// @CSharpLua.Template = "{0}"
+		/// </summary>
+		public static implicit operator Vector2(Vector3 v)
+		{
+			return default;
+		}
+		
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0}"
+		/// @CSharpLua.Template = "{0}"
 		/// </summary>
 		public static implicit operator Vector3(Vector2 v)
 		{

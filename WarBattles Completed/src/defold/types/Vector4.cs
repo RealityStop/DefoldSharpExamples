@@ -1,7 +1,7 @@
 namespace types
 {
 	/// <summary>
-	///     @CSharpLua.Ignore
+	/// @CSharpLua.Ignore
 	/// </summary>
 	public class Vector4
 	{
@@ -9,73 +9,73 @@ namespace types
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.vector4()"
+		/// @CSharpLua.Template = "vmath.vector4()"
 		/// </summary>
 		public extern Vector4();
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.vector4({0},{1},{2},{3})"
+		/// @CSharpLua.Template = "vmath.vector4({0},{1},{2},{3})"
 		/// </summary>
 		public extern Vector4(float x, float y, float u, float v);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} + {1}"
+		/// @CSharpLua.Template = "{0} + {1}"
 		/// </summary>
 		public static extern Vector4 operator +(Vector4 a, Vector4 b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} - {1}"
+		/// @CSharpLua.Template = "{0} - {1}"
 		/// </summary>
 		public static extern Vector4 operator -(Vector4 a, Vector4 b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "-{0}"
+		/// @CSharpLua.Template = "-{0}"
 		/// </summary>
 		public static extern Vector4 neg(Vector4 a);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} * {1}"
+		/// @CSharpLua.Template = "{0} * {1}"
 		/// </summary>
 		public static extern Vector4 operator *(Vector4 a, float b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} * {1}"
+		/// @CSharpLua.Template = "{0} * {1}"
 		/// </summary>
 		public static extern Vector4 operator *(float a, Vector4 b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} * {1}"
+		/// @CSharpLua.Template = "{0} * {1}"
 		/// </summary>
 		public static extern Vector4 operator *(Vector4 a, Vector4 b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "{0} / {1}"
+		/// @CSharpLua.Template = "{0} / {1}"
 		/// </summary>
 		public static extern Vector4 operator /(Vector4 a, float b);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.length({this})"
+		/// @CSharpLua.Template = "vmath.length({this})"
 		/// </summary>
-		public static extern float Magnitude();
+		public extern float Magnitude();
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.mul_per_elem({this},{0})"
+		/// @CSharpLua.Template = "vmath.mul_per_elem({this},{0})"
 		/// </summary>
 		public extern Vector4 MultiplyByElement(Vector4 other);
 
 
 		/// <summary>
-		///     @CSharpLua.Template = "vmath.normalize({this})"
+		/// @CSharpLua.Template = "vmath.normalize({this})"
 		/// </summary>
 		public extern Vector4 Normalize();
 	}

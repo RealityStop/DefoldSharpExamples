@@ -1,7 +1,7 @@
 namespace types
 {
 	/// <summary>
-	///     @CSharpLua.Ignore
+	/// @CSharpLua.Ignore
 	/// </summary>
 	public enum WindowEvent
 	{
@@ -9,6 +9,6 @@ namespace types
 		WINDOW_EVENT_FOCUS_GAINED = 1,
 		WINDOW_EVENT_RESIZED = 2,
 		WINDOW_EVENT_ICONIFIED = 3,
-		WINDOW_EVENT_DEICONIFIED = 4
+		WINDOW_EVENT_DEICONIFIED = 4,
 	}
 }

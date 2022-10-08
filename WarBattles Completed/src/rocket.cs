@@ -3,7 +3,7 @@ using types;
 
 public class RocketProperties : AnimatableProperties
 {
-	public Vector3 Direction = new Vector3();
+	public Vector2 Direction = new Vector2();
 }
 
 public class Rocket : GameObjectScript<RocketProperties>

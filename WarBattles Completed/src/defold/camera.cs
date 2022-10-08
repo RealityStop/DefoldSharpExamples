@@ -1,6 +1,9 @@
+using System;
+
 /// <summary>
-///     Camera API documentation
-///     @CSharpLua.Ignore
+/// Camera API documentation
+/// 
+/// @CSharpLua.Ignore
 /// </summary>
 public static class camera
 {

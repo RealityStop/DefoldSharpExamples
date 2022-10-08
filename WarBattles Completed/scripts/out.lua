@@ -19163,8 +19163,8 @@ System.namespace("", function (namespace)
         return {
           fields = {
             { "_firing", 0x1, System.Boolean },
-            { "_input", 0x1, out.types.Vector3 },
-            { "_movementDirection", 0x1, out.types.Vector3 },
+            { "_input", 0x1, out.types.Vector2 },
+            { "_movementDirection", 0x1, out.types.Vector2 },
             { "_moving", 0x1, System.Boolean },
             { "_speed", 0x1, System.Single }
           },
@@ -19200,7 +19200,7 @@ System.namespace("", function (namespace)
       __metadata__ = function (out)
         return {
           fields = {
-            { "Direction", 0x6, out.types.Vector3 }
+            { "Direction", 0x6, out.types.Vector2 }
           },
           class = { 0x6 }
         }
@@ -19736,6 +19736,26 @@ end
 do
 local System = System
 System.namespace("attributes", function (namespace)
+  namespace.class("DoNotGenerateAttribute", function (namespace)
+    return {
+      base = function (out)
+        return {
+          System.Attribute
+        }
+      end,
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("attributes", function (namespace)
 end)
 
 end
@@ -19758,11 +19778,11 @@ System.namespace("attributes", function (namespace)
       __ctor__ = __ctor__,
       __metadata__ = function (out)
         return {
-          methods = {
-            { ".ctor", 0x106, nil, System.Int32 }
-          },
           properties = {
             { "Style", 0x6, System.Int32 }
+          },
+          methods = {
+            { ".ctor", 0x106, nil, System.Int32 }
           },
           class = { 0x6 }
         }
@@ -19827,6 +19847,7 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when a script component is initialized.
+      -- 
       -- This is a callback-function, which is called by the engine when a script component is initialized. It can be used
       -- to set the initial state of the script.
       -- </summary>
@@ -19835,8 +19856,7 @@ System.namespace("support", function (namespace)
       -- <summary>
       -- Called when a script component is finalized.
       -- This is a callback-function, which is called by the engine when a script component is finalized (destroyed). It can
-      -- be used to e.g. take some last action, report the finalization to other game object instances, delete spawned
-      -- objects
+      -- be used to e.g. take some last action, report the finalization to other game object instances, delete spawned objects
       -- or release user input focus (see `release_input_focus`).
       -- </summary>
       final = function (this)
@@ -19851,6 +19871,7 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called every frame to update the script component.
+      -- 
       -- Frame-rate independent update. dt contains the delta time since the last update.
       -- Useful when you wish to manipulate physics objects at regular intervals to achieve a stable physics simulation.
       -- Requires that `physics.use_fixed_timestep` is enabled in game.project.
@@ -19860,9 +19881,10 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when a message has been sent to the script component.
-      -- This is a callback-function, which is called by the engine whenever a message has been sent to the script
-      -- component.
+      -- 
+      -- This is a callback-function, which is called by the engine whenever a message has been sent to the script component.
       -- It can be used to take action on the message, e.g. send a response back to the sender of the message.
+      -- 
       -- The `message` parameter is a table containing the message data. If the message is sent from the engine, the
       -- documentation of the message specifies which data is supplied.
       -- </summary>
@@ -19873,14 +19895,17 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when user input is received.
-      -- This is a callback-function, which is called by the engine when user input is sent to the game object instance of
-      -- the script.
+      -- 
+      -- This is a callback-function, which is called by the engine when user input is sent to the game object instance of the script.
       -- It can be used to take action on the input, e.g. move the instance according to the input.
+      -- 
       -- For an instance to obtain user input, it must first acquire input focuse through the message `acquire_input_focus`.
       -- See the documentation of that message for more information.
+      -- 
       -- The `action` parameter is a table containing data about the input mapped to the `action_id`.
       -- For mapped actions it specifies the value of the input and if it was just pressed or released.
       -- Actions are mapped to input in an input_binding-file.
+      -- 
       -- Mouse movement is specifically handled and uses `nil` as its `action_id`.
       -- The `action` only contains positional parameters in this case, such as x and y of the pointer.
       -- </summary>
@@ -19892,8 +19917,8 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when the script component is reloaded.
-      -- This is a callback-function, which is called by the engine when the script component is reloaded, e.g. from the
-      -- editor.
+      -- 
+      -- This is a callback-function, which is called by the engine when the script component is reloaded, e.g. from the editor.
       -- It can be used for live development, e.g. to tweak constants or set up the state properly for the instance.
       -- </summary>
       on_reload = function (this)
@@ -19980,6 +20005,7 @@ System.namespace("support", function (namespace)
       local init, final, update, fixed_update, on_message, on_input, on_reload
       -- <summary>
       -- Called when a script component is initialized.
+      -- 
       -- This is a callback-function, which is called by the engine when a script component is initialized. It can be used
       -- to set the initial state of the script.
       -- </summary>
@@ -19988,8 +20014,7 @@ System.namespace("support", function (namespace)
       -- <summary>
       -- Called when a script component is finalized.
       -- This is a callback-function, which is called by the engine when a script component is finalized (destroyed). It can
-      -- be used to e.g. take some last action, report the finalization to other game object instances, delete spawned
-      -- objects
+      -- be used to e.g. take some last action, report the finalization to other game object instances, delete spawned objects
       -- or release user input focus (see `release_input_focus`).
       -- </summary>
       final = function (this)
@@ -20004,6 +20029,7 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called every frame to update the script component.
+      -- 
       -- Frame-rate independent update. dt contains the delta time since the last update.
       -- Useful when you wish to manipulate physics objects at regular intervals to achieve a stable physics simulation.
       -- Requires that `physics.use_fixed_timestep` is enabled in game.project.
@@ -20013,9 +20039,10 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when a message has been sent to the script component.
-      -- This is a callback-function, which is called by the engine whenever a message has been sent to the script
-      -- component.
+      -- 
+      -- This is a callback-function, which is called by the engine whenever a message has been sent to the script component.
       -- It can be used to take action on the message, e.g. send a response back to the sender of the message.
+      -- 
       -- The `message` parameter is a table containing the message data. If the message is sent from the engine, the
       -- documentation of the message specifies which data is supplied.
       -- </summary>
@@ -20026,14 +20053,17 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when user input is received.
-      -- This is a callback-function, which is called by the engine when user input is sent to the game object instance of
-      -- the script.
+      -- 
+      -- This is a callback-function, which is called by the engine when user input is sent to the game object instance of the script.
       -- It can be used to take action on the input, e.g. move the instance according to the input.
+      -- 
       -- For an instance to obtain user input, it must first acquire input focuse through the message `acquire_input_focus`.
       -- See the documentation of that message for more information.
+      -- 
       -- The `action` parameter is a table containing data about the input mapped to the `action_id`.
       -- For mapped actions it specifies the value of the input and if it was just pressed or released.
       -- Actions are mapped to input in an input_binding-file.
+      -- 
       -- Mouse movement is specifically handled and uses `nil` as its `action_id`.
       -- The `action` only contains positional parameters in this case, such as x and y of the pointer.
       -- </summary>
@@ -20045,8 +20075,8 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when the script component is reloaded.
-      -- This is a callback-function, which is called by the engine when the script component is reloaded, e.g. from the
-      -- editor.
+      -- 
+      -- This is a callback-function, which is called by the engine when the script component is reloaded, e.g. from the editor.
       -- It can be used for live development, e.g. to tweak constants or set up the state properly for the instance.
       -- </summary>
       on_reload = function (this)
@@ -20088,8 +20118,7 @@ do
 local System = System
 System.namespace("support", function (namespace)
   -- <summary>
-  -- Because Defold will establish properties on the self userobject, we have to create a proxy to source the properties
-  -- from.
+  -- Because Defold will establish properties on the self userobject, we have to create a proxy to source the properties from.
   -- </summary>
   namespace.class("AnimatableProperties", function (namespace)
     local __ctor__
@@ -20358,6 +20387,7 @@ System.init({
     "Rocket",
     "StandardMessageImplementation",
     "attributes.DefoldPropertyProxyGenAttribute",
+    "attributes.DoNotGenerateAttribute",
     "support.DoNotGenerateAttribute",
     "support.LuaTableSerializableExt"
   }

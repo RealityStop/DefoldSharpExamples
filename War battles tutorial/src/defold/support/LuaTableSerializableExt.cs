@@ -30,21 +30,18 @@ namespace support
 
 			return ReturnTable();
 		}
-
-
+		
 		// Because "table" only exists in lua, we have to fool C# AND the serialization engine.  So we return a call from
 		// this function which C# thinks is a ILuaTable, but lua thinks is just "table".
-
-
+		
 		/// <summary>
-		///     @CSharpLua.Template = table
-		/// </summary>
+		/// @CSharpLua.Template = table
+		/// </summary>					
 		private static extern ILuaTable ReturnTable();
-
-
-		public static T DefaultTableDeserialization<T>(this ILuaTable self) where T : ILuaTableSerializable, new()
+		
+		public static T DefaultTableDeserialization<T>(this ILuaTable self) where T:ILuaTableSerializable, new()
 		{
-			var table = new T();
+			T table = new T();
 			/*
 			[[
 			local metadata = table.__metadata__
@@ -68,5 +65,7 @@ namespace support
 
 			return table;
 		}
+
+
 	}
 }

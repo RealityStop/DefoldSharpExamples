@@ -1,7 +1,7 @@
 namespace types
 {
 	/// <summary>
-	///     @CSharpLua.Ignore
+	/// @CSharpLua.Ignore
 	/// </summary>
 	public enum RenderState
 	{
@@ -10,6 +10,6 @@ namespace types
 		STATE_ALPHA_TEST = 3,
 		STATE_BLEND = 4,
 		STATE_CULL_FACE = 5,
-		STATE_POLYGON_OFFSET_FILL = 6
+		STATE_POLYGON_OFFSET_FILL = 6,
 	}
 }

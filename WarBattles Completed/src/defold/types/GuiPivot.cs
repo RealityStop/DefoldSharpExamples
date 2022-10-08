@@ -1,7 +1,7 @@
 namespace types
 {
 	/// <summary>
-	///     @CSharpLua.Ignore
+	/// @CSharpLua.Ignore
 	/// </summary>
 	public enum GuiPivot
 	{
@@ -13,6 +13,6 @@ namespace types
 		PIVOT_S = 5,
 		PIVOT_SW = 6,
 		PIVOT_W = 7,
-		PIVOT_NW = 8
+		PIVOT_NW = 8,
 	}
 }
