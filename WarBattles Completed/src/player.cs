@@ -1,19 +1,20 @@
-﻿using System;
-using System.Net.Mail;
-using support;
+﻿using support;
 using types;
 
 public class Player : GameObjectScript
 {
 	private readonly Vector2 _input = new Vector2();
+	private readonly float _speed = 50;
+	private bool _firing;
 	private Vector2 _movementDirection = new Vector2(0, -1);
 	private bool _moving;
-	private bool _firing;
-	private readonly float _speed = 50;
+	private Factory _rocketFactory;
 
 
 	protected override void init()
 	{
+		_rocketFactory = Component.At<Factory>(new ComponentLocator("rocketfactory"), true);
+		
 		RequestInput();
 	}
 
@@ -33,7 +34,7 @@ public class Player : GameObjectScript
 
 		_moving = _input.Magnitude() > 0;
 		if (_moving)
-			_movementDirection = _input.Normalize();
+			_movementDirection = _input.Normalize().ToVector2();
 
 		return false;
 	}
@@ -42,15 +43,15 @@ public class Player : GameObjectScript
 	protected override void update(float dt)
 	{
 		if (_moving)
-			go.set_position(go.get_position() + _movementDirection * _speed * dt);
+			Go.set_position(Go.get_position() + _movementDirection * _speed * dt);
 
 		if (_firing)
 		{
-			var angle = Math.Atan2(_movementDirection.y, _movementDirection.x);
-			var rotation = vmath.quat_rotation_z(angle);
-			LuaTable props = new LuaTable();
+			var angle = System.Math.Atan2(_movementDirection.y, _movementDirection.x);
+			var rotation = Vmath.quat_rotation_z(angle);
+			var props = new LuaTable();
 			props.Add("Direction", _movementDirection);
-			factory.create("#rocketfactory", null, rotation, props);
+			_rocketFactory.Create(null, rotation, props);
 		}
 
 		_input.x = 0;

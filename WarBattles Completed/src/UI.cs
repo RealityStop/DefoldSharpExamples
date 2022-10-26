@@ -1,9 +1,15 @@
 ﻿using support;
 using types;
 
-public class AddScoreMessage : CustomMessageImplementation
+public class AddScoreMessage : MessageImplementation
 {
 	public float scoreChange;
+
+
+	public override Hash FetchCode()
+	{
+		return nameof(AddScoreMessage);
+	}
 }
 
 public class MainUI : GUIScript
@@ -14,7 +20,7 @@ public class MainUI : GUIScript
 
 	protected override void init()
 	{
-		_scoreNode = gui.get_node("score");
+		_scoreNode = Gui.get_node("score");
 	}
 
 
@@ -27,7 +33,7 @@ public class MainUI : GUIScript
 		if (Message.IsMessage<AddScoreMessage>(message_id, message, out var impl))
 		{
 			_scoreTotal += impl.scoreChange;
-			gui.set_text(_scoreNode, "SCORE: " + _scoreTotal);
+			Gui.set_text(_scoreNode, "SCORE: " + _scoreTotal);
 		}
 	}
 }

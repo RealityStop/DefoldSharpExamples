@@ -3,6 +3,7 @@ require "scripts.out"
 function init(self)
 	self.script = MainUI()
 	self.script:AssignProperties(self)
+	support.Component.Register(self.script.Locator, self.script, MainUI)
 	self.script:init()
 end
 

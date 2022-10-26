@@ -8,9 +8,18 @@ public class RocketProperties : AnimatableProperties
 
 public class Rocket : GameObjectScript<RocketProperties>
 {
-	private float _speed = 200;
-	private float _life = 1;
 	private bool _isExploded;
+	private float _life = 1;
+	private readonly float _speed = 200;
+	private Sprite _sprite;
+
+	
+	private static Hash explosion = Defold.hash("explosion");
+
+	protected override void init()
+	{
+		_sprite = Component.At<Sprite>(new ComponentLocator("sprite"), true);
+	}
 
 
 	protected override void update(float dt)
@@ -20,7 +29,7 @@ public class Rocket : GameObjectScript<RocketProperties>
 			return;
 
 		//Movement
-		go.set_position(go.get_position() + Properties.Direction * _speed * dt);
+		Go.set_position(Go.get_position() + Properties.Direction * _speed * dt);
 
 		//Life update and explosion
 		_life -= dt; //Decrease the life timer with delta time. It will decrease with 1.0 per second.
@@ -32,27 +41,24 @@ public class Rocket : GameObjectScript<RocketProperties>
 	private void Explode()
 	{
 		_isExploded = true;
-		go.set_rotation(
+		Go.set_rotation(
 			new Quaternion()); //Set the game object rotation to 0, otherwise the explosion graphics will be rotated
 
-		LuaTable table = new LuaTable();
-		table.Add("id", Defold.hash("explosion"));
-
-		msg.post("#sprite", "play_animation", table);
+		_sprite.PlayFlipbook(explosion);
 	}
 
 
-	protected override void on_message(Hash message_id, dynamic message, object sender)
+	protected override void on_message(Hash message_id, object message, object sender)
 	{
-		if (message_id == Defold.hash("animation_done"))
-			go.delete();
-		
-		//The engine sends a message called "collision_response" when the shapes collide, if the group and mask pairing is correct.
-		if (message_id == Defold.hash("collision_response"))
+		if (Message.IsMessage<Sprite.animation_done_message>(message_id, message, out var doneMessage))
+			Go.delete();
+
+		if (Message.IsMessage<Physics.collision_response_message>(message_id, message, out var impl))
 		{
+			//The engine sends a message called "collision_response" when the shapes collide, if the group and mask pairing is correct.
 			Explode();
-			go.delete(message.other_id, true);
-			Message.postMessage("/gui#ui", new AddScoreMessage(){scoreChange = 100});
+			Go.delete(impl.other_id, true);
+			Message.postMessage("/gui#ui", new AddScoreMessage { scoreChange = 100 });
 		}
 	}
 }

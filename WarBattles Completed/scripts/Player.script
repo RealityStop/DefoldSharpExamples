@@ -3,6 +3,7 @@ require "scripts.out"
 function init(self)
 	self.script = Player()
 	self.script:AssignProperties(self)
+	support.Component.Register(self.script.Locator, self.script, Player)
 	self.script:init()
 end
 

@@ -4,6 +4,8 @@ go.property("Direction", vmath.vector3())
 function init(self)
 	self.script = Rocket()
 	self.script:AssignProperties(self)
+	support.Component.Register(self.script.Locator, self.script, Rocket)
+	self.script:init()
 end
 
 function update(self, dt)

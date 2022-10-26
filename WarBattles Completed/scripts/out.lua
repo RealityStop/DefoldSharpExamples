@@ -19097,14 +19097,21 @@ end)
 end
 do
 local System = System
+local support
+System.import(function (out)
+  support = out.support
+end)
 System.namespace("", function (namespace)
   namespace.class("Player", function (namespace)
     local init, on_input, update, __ctor__
     __ctor__ = function (this)
       this._input = vmath.vector3()
       this._movementDirection = vmath.vector3(0,- 1,0)
+      System.base(this).__ctor__(this)
     end
     init = function (this)
+      this._rocketFactory = support.Component.At1(System.new(support.ComponentLocator, 2, "rocketfactory"), true, Factory)
+
       this:RequestInput()
     end
     on_input = function (this, action_id, action)
@@ -19137,7 +19144,7 @@ System.namespace("", function (namespace)
         local rotation = vmath.quat_rotation_z(angle)
         local props = {}
         props["Direction"] = this._movementDirection
-        factory.create("#rocketfactory", nil, rotation, props)
+        this._rocketFactory:Create3(nil, rotation, props)
       end
 
       this._input.x = 0
@@ -19152,9 +19159,9 @@ System.namespace("", function (namespace)
           out.support.GameObjectScript
         }
       end,
-      _moving = false,
-      _firing = false,
       _speed = 50,
+      _firing = false,
+      _moving = false,
       init = init,
       on_input = on_input,
       update = update,
@@ -19166,6 +19173,7 @@ System.namespace("", function (namespace)
             { "_input", 0x1, out.types.Vector2 },
             { "_movementDirection", 0x1, out.types.Vector2 },
             { "_moving", 0x1, System.Boolean },
+            { "_rocketFactory", 0x1, out.Factory },
             { "_speed", 0x1, System.Single }
           },
           methods = {
@@ -19183,6 +19191,14 @@ end)
 end
 do
 local System = System
+local Physics
+local Sprite
+local support
+System.import(function (out)
+  Physics = out.Physics
+  Sprite = out.Sprite
+  support = out.support
+end)
 System.namespace("", function (namespace)
   namespace.class("RocketProperties", function (namespace)
     local __ctor__
@@ -19210,7 +19226,13 @@ System.namespace("", function (namespace)
 end)
 System.namespace("", function (namespace)
   namespace.class("Rocket", function (namespace)
-    local update, Explode, on_message
+    local explosion, init, update, Explode, on_message, static
+    static = function (this)
+      explosion = hash("explosion")
+    end
+    init = function (this)
+      this._sprite = support.Component.At1(System.new(support.ComponentLocator, 2, "sprite"), true, Sprite)
+    end
     update = function (this, dt)
       --If we've already exploded, there's no need for any movement or secondary explosions.
       if this._isExploded then
@@ -19232,23 +19254,22 @@ System.namespace("", function (namespace)
       go.set_rotation(vmath.quat())
       --Set the game object rotation to 0, otherwise the explosion graphics will be rotated
 
-      local table = {}
-      table["id"] = hash("explosion")
-
-      msg.post("#sprite", "play_animation", table)
+      this._sprite:PlayFlipbook(explosion)
     end
     on_message = function (this, message_id, message, sender)
-      if message_id == hash("animation_done") then
+      local default, doneMessage = Message.IsMessage1(message_id, message, nil, false, Sprite.animation_done_message)
+      if default then
         go.delete()
       end
 
-      --The engine sends a message called "collision_response" when the shapes collide, if the group and mask pairing is correct.
-      if message_id == hash("collision_response") then
+      local extern, impl = Message.IsMessage1(message_id, message, nil, false, Physics.collision_response_message)
+      if extern then
+        --The engine sends a message called "collision_response" when the shapes collide, if the group and mask pairing is correct.
         Explode(this)
-        go.delete(message.other_id, true)
-        local default = AddScoreMessage()
-        default.scoreChange = 100
-        Message.postMessage8("/gui#ui", default, AddScoreMessage)
+        go.delete(impl.other_id, true)
+        local ref = AddScoreMessage()
+        ref.scoreChange = 100
+        Message.postMessage6("/gui#ui", ref, AddScoreMessage)
       end
     end
     return {
@@ -19257,20 +19278,25 @@ System.namespace("", function (namespace)
           out.support.GameObjectScript_1(out.RocketProperties)
         }
       end,
-      _speed = 200,
-      _life = 1,
       _isExploded = false,
+      _life = 1,
+      _speed = 200,
+      init = init,
       update = update,
       on_message = on_message,
+      static = static,
       __metadata__ = function (out)
         return {
           fields = {
             { "_isExploded", 0x1, System.Boolean },
             { "_life", 0x1, System.Single },
-            { "_speed", 0x1, System.Single }
+            { "_speed", 0x1, System.Single },
+            { "_sprite", 0x1, out.Sprite },
+            { "explosion", 0x9, out.types.Hash }
           },
           methods = {
             { "Explode", 0x1, Explode },
+            { "init", 0x3, init },
             { "on_message", 0x303, on_message, out.types.Hash, System.Object, System.Object },
             { "update", 0x103, update, System.Single }
           },
@@ -19286,17 +19312,25 @@ do
 local System = System
 System.namespace("", function (namespace)
   namespace.class("AddScoreMessage", function (namespace)
+    local FetchCode
+    FetchCode = function (this)
+      return hash("AddScoreMessage" --[[nameof(AddScoreMessage)]])
+    end
     return {
       base = function (out)
         return {
-          out.CustomMessageImplementation
+          out.MessageImplementation
         }
       end,
       scoreChange = 0,
+      FetchCode = FetchCode,
       __metadata__ = function (out)
         return {
           fields = {
             { "scoreChange", 0x6, System.Single }
+          },
+          methods = {
+            { "FetchCode", 0x86, FetchCode, out.types.Hash }
           },
           class = { 0x6 }
         }
@@ -19351,114 +19385,165 @@ end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Buffer API documentation
+  -- 
+  -- </summary>
+  namespace.class("Buffer", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Built-ins API documentation
+  -- 
+  -- </summary>
+  namespace.class("Builtins", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
+  -- <summary>
+  -- Camera API documentation
+  -- 
+  -- </summary>
+  namespace.class("Camera", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("set_camera_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("set_camera")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        aspect_ratio = 0,
+        fov = 0,
+        near_z = 0,
+        far_z = 0,
+        orthographic_projection = false,
+        orthographic_zoom = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "aspect_ratio", 0x6, System.Double },
+              { "far_z", 0x6, System.Double },
+              { "fov", 0x6, System.Double },
+              { "near_z", 0x6, System.Double },
+              { "orthographic_projection", 0x6, System.Boolean },
+              { "orthographic_zoom", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("acquire_camera_focus_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("acquire_camera_focus")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("release_camera_focus_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("release_camera_focus")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
@@ -19469,9 +19554,967 @@ System.import(function (out)
   support = out.support
 end)
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Collection factory API documentation
+  -- 
+  -- </summary>
+  namespace.class("CollectionFactory", function (namespace)
+    local getStatus, Create, Create1, Create2, Create3
+    namespace.struct("CollectionFactoryCreateResult", function (namespace)
+      local __ctor1__, __ctor2__
+      __ctor1__ = function (this)
+      end
+      __ctor2__ = function (this, relativeHash, uniqueHash)
+        this.RelativeHash = relativeHash
+        this.UniqueHash = uniqueHash
+      end
+      return {
+        __ctor__ = {
+          __ctor1__,
+          __ctor2__
+        },
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "RelativeHash", 0x6, out.types.Hash },
+              { "UniqueHash", 0x6, out.types.Hash }
+            },
+            methods = {
+              { ".ctor", 0x206, __ctor2__, out.types.Hash, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+    end)
+    getStatus = function (this)
+      return collectionfactory.get_status(support.BuiltInComponentBase.op_Implicit(this))
+    end
+    Create = function (this)
+      return collectionfactory.create(support.BuiltInComponentBase.op_Implicit(this))
+    end
+    Create1 = function (this, position)
+      return collectionfactory.create(support.BuiltInComponentBase.op_Implicit(this), position)
+    end
+    Create2 = function (this, position, rotation)
+      return collectionfactory.create(support.BuiltInComponentBase.op_Implicit(this), position, rotation)
+    end
+    Create3 = function (this, position, rotation, properties)
+      return collectionfactory.create(support.BuiltInComponentBase.op_Implicit(this), position, rotation, properties)
+    end
+    return {
+      base = function (out)
+        return {
+          out.support.BuiltInComponentBase
+        }
+      end,
+      getStatus = getStatus,
+      Create = Create,
+      Create1 = Create1,
+      Create2 = Create2,
+      Create3 = Create3,
+      __metadata__ = function (out)
+        return {
+          properties = {
+            { "Status", 0x206, System.Int32, getStatus }
+          },
+          methods = {
+            { "Create", 0x86, Create, out.types.LuaTableOf_2(out.types.Hash, out.types.Hash) },
+            { "Create", 0x186, Create1, out.types.Vector3, out.types.LuaTableOf_2(out.types.Hash, out.types.Hash) },
+            { "Create", 0x286, Create2, out.types.Vector3, out.types.Quaternion, out.types.LuaTableOf_2(out.types.Hash, out.types.Hash) },
+            { "Create", 0x386, Create3, out.types.Vector3, out.types.Quaternion, out.types.ILuaTable, out.types.LuaTableOf_2(out.types.Hash, out.types.Hash) }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Collection proxy API documentation
+  -- 
+  -- </summary>
+  namespace.class("Collectionproxy", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("set_time_step_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("set_time_step")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        factor = 0,
+        mode = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "factor", 0x6, System.Double },
+              { "mode", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("load_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("load")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("async_load_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("async_load")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("proxy_loaded_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("proxy_loaded")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("init_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("init")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("enable_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("enable")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("disable_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("disable")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("final_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("final")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("unload_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("unload")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("proxy_unloaded_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("proxy_unloaded")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Crash API documentation
+  -- 
+  -- </summary>
+  namespace.class("Crash", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Facebook API documentation
+  -- 
+  -- </summary>
+  namespace.class("Facebook", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+local support
+System.import(function (out)
+  support = out.support
+end)
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Factory API documentation
+  -- 
+  -- </summary>
+  namespace.class("Factory", function (namespace)
+    local getStatus, Unload, Load, Load1, Create, Create1, Create2, Create3, 
+    Create4, class
+    getStatus = function (this)
+      return factory.get_status(support.BuiltInComponentBase.op_Implicit(this))
+    end
+    -- <summary>
+    -- This decreases the reference count for each resource loaded with factory.load. If reference is zero, the resource is destroyed.
+    -- Calling this function when the factory is not marked as dynamic loading does nothing.
+    -- </summary>
+    Unload = function (this)
+      factory.unload(support.BuiltInComponentBase.op_Implicit(this))
+    end
+    -- <summary>
+    -- Resources are referenced by the factory component until the existing (parent) collection is destroyed or factory.unload is called.
+    -- Calling this function when the factory is not marked as dynamic loading does nothing.
+    -- </summary>
+    Load = function (this)
+      factory.load(support.BuiltInComponentBase.op_Implicit(this))
+    end
+    Load1 = function (this, callback)
+      local function IntermediateCallback(obj, url, b) 
+        callback(obj, this, b)
+      end
+
+      factory.load(support.BuiltInComponentBase.op_Implicit(this), IntermediateCallback)
+    end
+    Create = function (this)
+      return factory.create(support.BuiltInComponentBase.op_Implicit(this))
+    end
+    Create1 = function (this, position)
+      return factory.create(support.BuiltInComponentBase.op_Implicit(this), position)
+    end
+    Create2 = function (this, position, rotation)
+      return factory.create(support.BuiltInComponentBase.op_Implicit(this), position, rotation)
+    end
+    Create3 = function (this, position, rotation, properties)
+      return factory.create(support.BuiltInComponentBase.op_Implicit(this), position, rotation, properties)
+    end
+    Create4 = function (this, position, rotation, properties, scale)
+      return factory.create(support.BuiltInComponentBase.op_Implicit(this), position, rotation, properties, scale)
+    end
+    class = {
+      base = function (out)
+        return {
+          out.support.BuiltInComponentBase
+        }
+      end,
+      getStatus = getStatus,
+      Unload = Unload,
+      Load = Load,
+      Load1 = Load1,
+      Create = Create,
+      Create1 = Create1,
+      Create2 = Create2,
+      Create3 = Create3,
+      Create4 = Create4,
+      __metadata__ = function (out)
+        return {
+          properties = {
+            { "Status", 0x206, System.Int32, getStatus }
+          },
+          methods = {
+            { "Create", 0x86, Create, out.types.Hash },
+            { "Create", 0x186, Create1, out.types.Vector3, out.types.Hash },
+            { "Create", 0x286, Create2, out.types.Vector3, out.types.Quaternion, out.types.Hash },
+            { "Create", 0x386, Create3, out.types.Vector3, out.types.Quaternion, out.types.ILuaTable, out.types.Hash },
+            { "Create", 0x486, Create4, out.types.Vector3, out.types.Quaternion, out.types.ILuaTable, System.Double, out.types.Hash },
+            { "Load", 0x6, Load },
+            { "Load", 0x106, Load1, System.Delegate(System.Object, class, System.Boolean, System.Void) },
+            { "Unload", 0x6, Unload }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+    return class
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Game object API documentation
+  -- 
+  -- </summary>
+  namespace.class("Go", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("acquire_input_focus_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("acquire_input_focus")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("release_input_focus_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("release_input_focus")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("set_parent_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("set_parent")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        keep_world_transform = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "keep_world_transform", 0x6, System.Double },
+              { "parent_id", 0x6, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("enable_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("enable")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("disable_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("disable")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- GUI API documentation
+  -- 
+  -- </summary>
+  namespace.class("Gui", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("layout_changed_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("layout_changed")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "id", 0x6, out.types.Hash },
+              { "previous_id", 0x6, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- HTML5 API documentation
+  -- 
+  -- </summary>
+  namespace.class("Html5", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- HTTP API documentation
+  -- 
+  -- </summary>
+  namespace.class("Http", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Inter-app communication API documentation
+  -- 
+  -- </summary>
+  namespace.class("Iac", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- In-app purchases API documentation
+  -- 
+  -- </summary>
+  namespace.class("Iap", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Image API documentation
+  -- 
+  -- </summary>
+  namespace.class("Image", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- JSON API documentation
+  -- 
+  -- </summary>
+  namespace.class("Json", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Label API documentation
+  -- 
+  -- </summary>
+  namespace.class("Label", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Lua math standard library
+  -- 
+  -- </summary>
+  namespace.class("Math", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+local support
+local types
+local DictTypeHash
+System.import(function (out)
+  support = out.support
+  types = out.types
+  DictTypeHash = System.Dictionary(System.Type, types.Hash)
+end)
+System.namespace("", function (namespace)
   namespace.class("Message", function (namespace)
-    local postMessage, postMessage1, postMessage2, postMessage3, postMessage4, postMessage5, postMessage6, postMessage7, 
-    postMessage8, IsMessage, IsMessage1
+    local typeToHashLookup, postMessage, postMessage1, postMessage2, postMessage3, postMessage4, postMessage5, postMessage6, 
+    IsMessage, IsMessage1, static
+    static = function (this)
+      typeToHashLookup = DictTypeHash()
+    end
     postMessage = function (id, code, data)
       msg.post(id,code,data:ToTable())
     end
@@ -19482,21 +20525,15 @@ System.namespace("", function (namespace)
       post5(id, code, data:ToTable())
     end
     postMessage3 = function (id, message)
-      msg.post(id,message:getCode(),message:ToTable())
+      msg.post(id,message:FetchCode(),message:ToTable())
     end
     postMessage4 = function (id, message)
-      post5(id, message:getCode(), message:ToTable())
+      post5(id, message:FetchCode(), message:ToTable())
     end
     postMessage5 = function (id, message)
-      post4(id, message:getCode(), message:ToTable())
+      post4(id, message:FetchCode(), message:ToTable())
     end
     postMessage6 = function (id, message, T)
-      post5(id, System.typeof(T):getName(), message:ToTable())
-    end
-    postMessage7 = function (id, message, T)
-      post4(id, System.typeof(T):getName(), message:ToTable())
-    end
-    postMessage8 = function (id, message, T)
       msg.post(id,System.typeof(T):getName(),message:ToTable())
     end
     IsMessage = function (message_id, message, expectedCode, messageImpl, T)
@@ -19510,7 +20547,14 @@ System.namespace("", function (namespace)
       return false, messageImpl
     end
     IsMessage1 = function (message_id, message, messageImpl, reconstructMetadata, T)
-      if message_id == hash(System.typeof(T):getName()) then
+      local default, hash = typeToHashLookup:TryGetValue(System.typeof(T), nil)
+      if not default then
+        local dummy = T()
+        hash = dummy:FetchCode()
+        typeToHashLookup:AddKeyValue(System.typeof(T), hash)
+      end
+
+      if hash == message_id then
         if reconstructMetadata then
           messageImpl = support.LuaTableSerializableExt.DefaultTableDeserialization(message, T)
         else
@@ -19532,24 +20576,24 @@ System.namespace("", function (namespace)
       postMessage4 = postMessage4,
       postMessage5 = postMessage5,
       postMessage6 = postMessage6,
-      postMessage7 = postMessage7,
-      postMessage8 = postMessage8,
       IsMessage = IsMessage,
       IsMessage1 = IsMessage1,
+      static = static,
       __metadata__ = function (out)
         return {
+          fields = {
+            { "typeToHashLookup", 0x9, System.Dictionary(System.Type, out.types.Hash) }
+          },
           methods = {
             { "IsMessage", 0x1048E, IsMessage, function (T) return out.types.Hash, System.Object, out.types.Hash, T, System.Boolean end },
             { "IsMessage", 0x1048E, IsMessage1, function (T) return out.types.Hash, System.Object, T, System.Boolean, System.Boolean end },
             { "postMessage", 0x30E, postMessage, System.String, System.String, out.types.ILuaTableSerializable },
             { "postMessage", 0x30E, postMessage1, out.types.Url, System.String, out.types.ILuaTableSerializable },
             { "postMessage", 0x30E, postMessage2, out.types.Hash, System.String, out.types.ILuaTableSerializable },
-            { "postMessage", 0x20E, postMessage3, System.String, out.StandardMessageImplementation },
-            { "postMessage", 0x20E, postMessage4, out.types.Hash, out.StandardMessageImplementation },
-            { "postMessage", 0x20E, postMessage5, out.types.Url, out.StandardMessageImplementation },
-            { "postMessage", 0x1020E, postMessage6, function (T) return out.types.Hash, T end },
-            { "postMessage", 0x1020E, postMessage7, function (T) return out.types.Url, T end },
-            { "postMessage", 0x1020E, postMessage8, function (T) return System.String, T end }
+            { "postMessage", 0x20E, postMessage3, System.String, out.MessageImplementation },
+            { "postMessage", 0x20E, postMessage4, out.types.Hash, out.MessageImplementation },
+            { "postMessage", 0x20E, postMessage5, out.types.Url, out.MessageImplementation },
+            { "postMessage", 0x1020E, postMessage6, function (T) return System.String, T end }
           },
           class = { 0xE }
         }
@@ -19558,31 +20602,7 @@ System.namespace("", function (namespace)
   end)
 end)
 System.namespace("", function (namespace)
-  namespace.class("StandardMessageImplementation", function (namespace)
-    local ToTable
-    ToTable = function (this)
-      return support.LuaTableSerializableExt.DefaultTableSerialization(this)
-    end
-    return {
-      base = function (out)
-        return {
-          out.types.ILuaTableSerializable
-        }
-      end,
-      ToTable = ToTable,
-      __metadata__ = function (out)
-        return {
-          methods = {
-            { "ToTable", 0x86, ToTable, out.types.ILuaTable }
-          },
-          class = { 0x6 }
-        }
-      end
-    }
-  end)
-end)
-System.namespace("", function (namespace)
-  namespace.class("CustomMessageImplementation", function (namespace)
+  namespace.class("MessageImplementation", function (namespace)
     local ToTable
     ToTable = function (this)
       return support.LuaTableSerializableExt.DefaultTableSerialization(this)
@@ -19610,102 +20630,1467 @@ end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Model API documentation
+  -- 
+  -- </summary>
+  namespace.class("Model", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("model_animation_done_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("model_animation_done")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "animation_id", 0x6, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Messaging API documentation
+  -- 
+  -- </summary>
+  namespace.class("Msg", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Particle effects API documentation
+  -- 
+  -- </summary>
+  namespace.class("Particlefx", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Collision object physics API documentation
+  -- 
+  -- </summary>
+  namespace.class("Physics", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("apply_force_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("apply_force")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "force", 0x6, out.types.Vector3 },
+              { "position", 0x6, out.types.Vector3 }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("collision_response_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("collision_response")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "other_group", 0x6, out.types.Hash },
+              { "other_id", 0x6, out.types.Hash },
+              { "other_position", 0x6, out.types.Vector3 },
+              { "own_group", 0x6, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("contact_point_response_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("contact_point_response")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        distance = 0,
+        applied_impulse = 0,
+        life_time = 0,
+        mass = 0,
+        other_mass = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "applied_impulse", 0x6, System.Double },
+              { "distance", 0x6, System.Double },
+              { "life_time", 0x6, System.Double },
+              { "mass", 0x6, System.Double },
+              { "normal", 0x6, out.types.Vector3 },
+              { "other_group", 0x6, out.types.Hash },
+              { "other_id", 0x6, out.types.Hash },
+              { "other_mass", 0x6, System.Double },
+              { "other_position", 0x6, out.types.Vector3 },
+              { "own_group", 0x6, out.types.Hash },
+              { "position", 0x6, out.types.Vector3 },
+              { "relative_velocity", 0x6, out.types.Vector3 }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("trigger_response_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("trigger_response")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        enter = false,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "enter", 0x6, System.Boolean },
+              { "other_group", 0x6, out.types.Hash },
+              { "other_id", 0x6, out.types.Hash },
+              { "own_group", 0x6, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("ray_cast_response_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("ray_cast_response")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        fraction = 0,
+        request_id = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "fraction", 0x6, System.Double },
+              { "group", 0x6, out.types.Hash },
+              { "id", 0x6, out.types.Hash },
+              { "normal", 0x6, out.types.Vector3 },
+              { "position", 0x6, out.types.Vector3 },
+              { "request_id", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("ray_cast_missed_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("ray_cast_missed")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        request_id = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "request_id", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Profiler API documentation
+  -- 
+  -- </summary>
+  namespace.class("Profiler", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Push notifications API documentation
+  -- 
+  -- </summary>
+  namespace.class("Push", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Rendering API documentation
+  -- 
+  -- </summary>
+  namespace.class("Render", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("draw_debug_text_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("draw_debug_text")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "color", 0x6, out.types.Vector4 },
+              { "position", 0x6, out.types.Vector3 },
+              { "text", 0x6, System.String }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("draw_line_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("draw_line")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "color", 0x6, out.types.Vector4 },
+              { "end_point", 0x6, out.types.Vector3 },
+              { "start_point", 0x6, out.types.Vector3 }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("window_resized_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("window_resized")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        height = 0,
+        width = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "height", 0x6, System.Double },
+              { "width", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("resize_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("resize")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        height = 0,
+        width = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "height", 0x6, System.Double },
+              { "width", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("clear_color_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("clear_color")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "color", 0x6, out.types.Vector4 }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Resource API documentation
+  -- 
+  -- </summary>
+  namespace.class("Resource", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Sound API documentation
+  -- 
+  -- </summary>
+  namespace.class("Sound", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("play_sound_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("play_sound")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        delay = 0,
+        gain = 0,
+        play_id = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "delay", 0x6, System.Double },
+              { "gain", 0x6, System.Double },
+              { "play_id", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("stop_sound_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("stop_sound")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("set_gain_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("set_gain")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        gain = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "gain", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("sound_done_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("sound_done")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        play_id = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "play_id", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+local support
+System.import(function (out)
+  support = out.support
+end)
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Sprite API documentation
+  -- 
+  -- </summary>
+  namespace.class("Sprite", function (namespace)
+    local getFlipHorizontal, setFlipHorizontal, getFlipVertical, setFlipVertical, getSize, getScale, setScale, getImage, 
+    setImage, getMaterial, setMaterial, getCursor, setCursor, getPlaybackRate, setPlaybackRate, getAnimation, 
+    PlayFlipbook, PlayFlipbook1, PlayFlipbook2, class
+    -- <summary>
+    -- </summary>
+    namespace.class("play_animation_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("play_animation")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "id", 0x6, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("animation_done_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("animation_done")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        current_tile = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "current_tile", 0x6, System.Double },
+              { "id", 0x6, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    getFlipHorizontal = function (this)
+      if this.IsCachingEnabled then
+        return this._cachedFlipHorizontal
+      end
+
+      System.throw(System.NotImplementedException("defold API does not provide for querying a sprite's flip state"))
+    end
+    setFlipHorizontal = function (this, value)
+      if this.IsCachingEnabled then
+        this._cachedFlipHorizontal = value
+      end
+
+      sprite.set_hflip(support.BuiltInComponentBase.op_Implicit(this), value)
+    end
+    getFlipVertical = function (this)
+      if this.IsCachingEnabled then
+        return this._cachedFlipVertical
+      end
+
+      System.throw(System.NotImplementedException("defold API does not provide for querying a sprite's flip state"))
+    end
+    setFlipVertical = function (this, value)
+      if this.IsCachingEnabled then
+        this._cachedFlipVertical = value
+      end
+
+      sprite.set_vflip(support.BuiltInComponentBase.op_Implicit(this), value)
+    end
+    getSize = function (this)
+      return go.get(support.BuiltInComponentBase.op_Implicit(this), "size")
+    end
+    getScale = function (this)
+      return go.get(support.BuiltInComponentBase.op_Implicit(this), "scale")
+    end
+    setScale = function (this, value)
+      go.set(support.BuiltInComponentBase.op_Implicit(this), "scale", value)
+    end
+    getImage = function (this)
+      return go.get(support.BuiltInComponentBase.op_Implicit(this), "image")
+    end
+    setImage = function (this, value)
+      go.set(support.BuiltInComponentBase.op_Implicit(this), "image", value)
+    end
+    getMaterial = function (this)
+      return go.get(support.BuiltInComponentBase.op_Implicit(this), "material")
+    end
+    setMaterial = function (this, value)
+      go.set(support.BuiltInComponentBase.op_Implicit(this), "material", value)
+    end
+    getCursor = function (this)
+      return go.get(support.BuiltInComponentBase.op_Implicit(this), "cursor")
+    end
+    setCursor = function (this, value)
+      go.set(support.BuiltInComponentBase.op_Implicit(this), "cursor", value)
+    end
+    getPlaybackRate = function (this)
+      return go.get(support.BuiltInComponentBase.op_Implicit(this), "playback_rate")
+    end
+    setPlaybackRate = function (this, value)
+      go.set(support.BuiltInComponentBase.op_Implicit(this), "playback_rate", value)
+    end
+    getAnimation = function (this)
+      return go.get(support.BuiltInComponentBase.op_Implicit(this), "animation")
+    end
+    PlayFlipbook = function (this, animation)
+      sprite.play_flipbook(support.BuiltInComponentBase.op_Implicit(this), animation)
+    end
+    PlayFlipbook1 = function (this, animation, onComplete)
+      local function callback(target, hash, table, url) 
+        onComplete(this, hash, table, url)
+      end
+
+      sprite.play_flipbook(support.BuiltInComponentBase.op_Implicit(this), animation, callback)
+    end
+    PlayFlipbook2 = function (this, animation, onComplete, playProperties)
+      local function callback(target, hash, table, url) 
+        onComplete(this, hash, table, url)
+      end
+
+      sprite.play_flipbook(support.BuiltInComponentBase.op_Implicit(this), animation, callback, playProperties)
+    end
+    class = {
+      base = function (out)
+        return {
+          out.support.BuiltInComponentBase
+        }
+      end,
+      _cachedFlipHorizontal = false,
+      _cachedFlipVertical = false,
+      getFlipHorizontal = getFlipHorizontal,
+      setFlipHorizontal = setFlipHorizontal,
+      getFlipVertical = getFlipVertical,
+      setFlipVertical = setFlipVertical,
+      getSize = getSize,
+      getScale = getScale,
+      setScale = setScale,
+      getImage = getImage,
+      setImage = setImage,
+      getMaterial = getMaterial,
+      setMaterial = setMaterial,
+      getCursor = getCursor,
+      setCursor = setCursor,
+      getPlaybackRate = getPlaybackRate,
+      setPlaybackRate = setPlaybackRate,
+      getAnimation = getAnimation,
+      PlayFlipbook = PlayFlipbook,
+      PlayFlipbook1 = PlayFlipbook1,
+      PlayFlipbook2 = PlayFlipbook2,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "_cachedFlipHorizontal", 0x1, System.Boolean },
+            { "_cachedFlipVertical", 0x1, System.Boolean }
+          },
+          properties = {
+            { "Animation", 0x206, out.types.Hash, getAnimation },
+            { "Cursor", 0x106, System.Double, getCursor, setCursor },
+            { "FlipHorizontal", 0x106, System.Boolean, getFlipHorizontal, setFlipHorizontal },
+            { "FlipVertical", 0x106, System.Boolean, getFlipVertical, setFlipVertical },
+            { "Image", 0x106, out.types.Hash, getImage, setImage },
+            { "Material", 0x106, out.types.Hash, getMaterial, setMaterial },
+            { "PlaybackRate", 0x106, System.Double, getPlaybackRate, setPlaybackRate },
+            { "Scale", 0x106, out.types.Vector2, getScale, setScale },
+            { "Size", 0x206, out.types.Vector2, getSize }
+          },
+          methods = {
+            { "PlayFlipbook", 0x106, PlayFlipbook, out.types.Hash },
+            { "PlayFlipbook", 0x206, PlayFlipbook1, out.types.Hash, System.Delegate(class, out.types.Hash, out.types.ILuaTable, out.types.Url, System.Void) },
+            { "PlayFlipbook", 0x306, PlayFlipbook2, out.types.Hash, System.Delegate(class, out.types.Hash, out.types.ILuaTable, out.types.Url, System.Void), out.types.ILuaTable }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+    return class
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- System API documentation
+  -- 
+  -- </summary>
+  namespace.class("Sys", function (namespace)
+    -- <summary>
+    -- </summary>
+    namespace.class("exit_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("exit")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        code = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "code", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("toggle_profile_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("toggle_profile")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("toggle_physics_debug_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("toggle_physics_debug")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("start_record_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("start_record")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        frame_period = 0,
+        fps = 0,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "file_name", 0x6, System.String },
+              { "fps", 0x6, System.Double },
+              { "frame_period", 0x6, System.Double }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("stop_record_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("stop_record")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("reboot_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("reboot")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash },
+              { "arg1", 0x6, System.String },
+              { "arg2", 0x6, System.String },
+              { "arg3", 0x6, System.String },
+              { "arg4", 0x6, System.String },
+              { "arg5", 0x6, System.String },
+              { "arg6", 0x6, System.String }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("set_vsync_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("set_vsync")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    -- <summary>
+    -- </summary>
+    namespace.class("set_update_frequency_message", function (namespace)
+      local FetchCode, class, static
+      static = function (this)
+        this.__CODE__ = hash("set_update_frequency")
+      end
+      FetchCode = function (this)
+        return class.__CODE__
+      end
+      class = {
+        base = function (out)
+          return {
+            out.MessageImplementation
+          }
+        end,
+        FetchCode = FetchCode,
+        static = static,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "__CODE__", 0xE, out.types.Hash }
+            },
+            methods = {
+              { "FetchCode", 0x86, FetchCode, out.types.Hash }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+      return class
+    end)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+local support
+local types
+System.import(function (out)
+  support = out.support
+  types = out.types
+end)
+System.namespace("", function (namespace)
+  -- <summary>
+  -- Tilemap API documentation
+  -- 
+  -- </summary>
+  namespace.class("Tilemap", function (namespace)
+    local getBounds, GetTile, GetTile1, SetTile, SetTile1, SetTile2, SetTile3, ValidateCachedBounds, 
+    SetLayerVisible, SetLayerVisible1
+    getBounds = function (this)
+      if this.IsCachingEnabled then
+        if this._cachedBounds ~= nil then
+          return this._cachedBounds
+        end
+      end
+
+
+      local default, y, w, h = tilemap.get_bounds(support.BuiltInComponentBase.op_Implicit(this))
+      local x = default
+      local returnVal = types.Rect(x, y, w, h)
+
+      if this.IsCachingEnabled then
+        this._cachedBounds = returnVal
+      end
+
+      return returnVal
+    end
+    GetTile = function (this, x, y, layer)
+      return System.ToInt32(tilemap.get_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y))
+    end
+    GetTile1 = function (this, x, y, layer)
+      return System.ToInt32(tilemap.get_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y))
+    end
+    SetTile = function (this, x, y, tile, layer)
+      ValidateCachedBounds(this, x, y)
+      tilemap.set_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y, tile)
+    end
+    SetTile1 = function (this, x, y, tile, layer, transformBitmask)
+      ValidateCachedBounds(this, x, y)
+      tilemap.set_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y, tile, transformBitmask)
+    end
+    SetTile2 = function (this, x, y, tile, layer)
+      ValidateCachedBounds(this, x, y)
+      tilemap.set_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y, tile)
+    end
+    SetTile3 = function (this, x, y, tile, layer, transformBitmask)
+      ValidateCachedBounds(this, x, y)
+      tilemap.set_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y, tile, transformBitmask)
+    end
+    ValidateCachedBounds = function (this, x, y)
+      if this.IsCachingEnabled then
+        if this._cachedBounds ~= nil then
+          --If we're setting a tile outside the cached boundaries,
+          --clear the cache so the next request will re-fetch.
+          if not this._cachedBounds:InRect(x, y) then
+            this._cachedBounds = nil
+          end
+        end
+      end
+    end
+    SetLayerVisible = function (this, layer, visible)
+      tilemap.set_visible(support.BuiltInComponentBase.op_Implicit(this), layer, visible)
+    end
+    SetLayerVisible1 = function (this, layer, visible)
+      tilemap.set_visible(support.BuiltInComponentBase.op_Implicit(this), layer, visible)
+    end
+    return {
+      base = function (out)
+        return {
+          out.support.BuiltInComponentBase
+        }
+      end,
+      getBounds = getBounds,
+      GetTile = GetTile,
+      GetTile1 = GetTile1,
+      SetTile = SetTile,
+      SetTile1 = SetTile1,
+      SetTile2 = SetTile2,
+      SetTile3 = SetTile3,
+      SetLayerVisible = SetLayerVisible,
+      SetLayerVisible1 = SetLayerVisible1,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "_cachedBounds", 0x1, out.types.Rect }
+          },
+          properties = {
+            { "Bounds", 0x206, out.types.Rect, getBounds }
+          },
+          methods = {
+            { "GetTile", 0x386, GetTile, System.Int32, System.Int32, System.String, System.Int32 },
+            { "GetTile", 0x386, GetTile1, System.Int32, System.Int32, out.types.Hash, System.Int32 },
+            { "SetLayerVisible", 0x206, SetLayerVisible, System.String, System.Boolean },
+            { "SetLayerVisible", 0x206, SetLayerVisible1, out.types.Hash, System.Boolean },
+            { "SetTile", 0x406, SetTile, System.Int32, System.Int32, System.Int32, System.String },
+            { "SetTile", 0x506, SetTile1, System.Int32, System.Int32, System.Int32, System.String, System.Int32 },
+            { "SetTile", 0x406, SetTile2, System.Int32, System.Int32, System.Int32, out.types.Hash },
+            { "SetTile", 0x506, SetTile3, System.Int32, System.Int32, System.Int32, out.types.Hash, System.Int32 },
+            { "ValidateCachedBounds", 0x201, ValidateCachedBounds, System.Int32, System.Int32 }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Timer API documentation
+  -- 
+  -- </summary>
+  namespace.class("Timer", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Vector math API documentation
+  -- 
+  -- </summary>
+  namespace.class("Vmath", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Webview API documentation
+  -- 
+  -- </summary>
+  namespace.class("Webview", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
+  -- <summary>
+  -- Window API documentation
+  -- 
+  -- </summary>
+  namespace.class("Window", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
-end)
-
-end
-do
-local System = System
-System.namespace("", function (namespace)
+  -- <summary>
+  -- Zlib compression API documentation
+  -- 
+  -- </summary>
+  namespace.class("Zlib", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
 end)
 
 end
@@ -19778,11 +22163,11 @@ System.namespace("attributes", function (namespace)
       __ctor__ = __ctor__,
       __metadata__ = function (out)
         return {
-          properties = {
-            { "Style", 0x6, System.Int32 }
-          },
           methods = {
             { ".ctor", 0x106, nil, System.Int32 }
+          },
+          properties = {
+            { "Style", 0x6, System.Int32 }
           },
           class = { 0x6 }
         }
@@ -19835,8 +22220,12 @@ System.namespace("support", function (namespace)
   -- </summary>
   namespace.class("GameObjectScript_1", function (namespace)
     return function (TProps)
-      local RequestInput, ReleaseInput, init, final, update, fixed_update, on_message, on_input, 
-      on_reload
+      local getLocator, RequestInput, ReleaseInput, init, final, update, fixed_update, on_message, 
+      on_input, on_reload, __ctor__
+      __ctor__ = function (this)
+        this.Locator = msg.url()
+      end
+      getLocator = System.property("Locator", true)
       RequestInput = function (this)
         msg.post('.', 'acquire_input_focus')
         this.IsInputFocusHeld = true
@@ -19847,7 +22236,6 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when a script component is initialized.
-      -- 
       -- This is a callback-function, which is called by the engine when a script component is initialized. It can be used
       -- to set the initial state of the script.
       -- </summary>
@@ -19856,7 +22244,8 @@ System.namespace("support", function (namespace)
       -- <summary>
       -- Called when a script component is finalized.
       -- This is a callback-function, which is called by the engine when a script component is finalized (destroyed). It can
-      -- be used to e.g. take some last action, report the finalization to other game object instances, delete spawned objects
+      -- be used to e.g. take some last action, report the finalization to other game object instances, delete spawned
+      -- objects
       -- or release user input focus (see `release_input_focus`).
       -- </summary>
       final = function (this)
@@ -19871,7 +22260,6 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called every frame to update the script component.
-      -- 
       -- Frame-rate independent update. dt contains the delta time since the last update.
       -- Useful when you wish to manipulate physics objects at regular intervals to achieve a stable physics simulation.
       -- Requires that `physics.use_fixed_timestep` is enabled in game.project.
@@ -19881,10 +22269,9 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when a message has been sent to the script component.
-      -- 
-      -- This is a callback-function, which is called by the engine whenever a message has been sent to the script component.
+      -- This is a callback-function, which is called by the engine whenever a message has been sent to the script
+      -- component.
       -- It can be used to take action on the message, e.g. send a response back to the sender of the message.
-      -- 
       -- The `message` parameter is a table containing the message data. If the message is sent from the engine, the
       -- documentation of the message specifies which data is supplied.
       -- </summary>
@@ -19895,17 +22282,14 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when user input is received.
-      -- 
-      -- This is a callback-function, which is called by the engine when user input is sent to the game object instance of the script.
+      -- This is a callback-function, which is called by the engine when user input is sent to the game object instance of
+      -- the script.
       -- It can be used to take action on the input, e.g. move the instance according to the input.
-      -- 
       -- For an instance to obtain user input, it must first acquire input focuse through the message `acquire_input_focus`.
       -- See the documentation of that message for more information.
-      -- 
       -- The `action` parameter is a table containing data about the input mapped to the `action_id`.
       -- For mapped actions it specifies the value of the input and if it was just pressed or released.
       -- Actions are mapped to input in an input_binding-file.
-      -- 
       -- Mouse movement is specifically handled and uses `nil` as its `action_id`.
       -- The `action` only contains positional parameters in this case, such as x and y of the pointer.
       -- </summary>
@@ -19917,8 +22301,8 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when the script component is reloaded.
-      -- 
-      -- This is a callback-function, which is called by the engine when the script component is reloaded, e.g. from the editor.
+      -- This is a callback-function, which is called by the engine when the script component is reloaded, e.g. from the
+      -- editor.
       -- It can be used for live development, e.g. to tweak constants or set up the state properly for the instance.
       -- </summary>
       on_reload = function (this)
@@ -19926,9 +22310,11 @@ System.namespace("support", function (namespace)
       return {
         base = function (out)
           return {
-            out.support.ScriptPropertyHost_1(TProps)
+            out.support.ScriptPropertyHost_1(TProps),
+            out.support.IUserComponent
           }
         end,
+        getLocator = getLocator,
         IsInputFocusHeld = false,
         RequestInput = RequestInput,
         ReleaseInput = ReleaseInput,
@@ -19939,12 +22325,15 @@ System.namespace("support", function (namespace)
         on_message = on_message,
         on_input = on_input,
         on_reload = on_reload,
+        __ctor__ = __ctor__,
         __metadata__ = function (out)
           return {
             properties = {
-              { "IsInputFocusHeld", 0x3, System.Boolean }
+              { "IsInputFocusHeld", 0x3, System.Boolean },
+              { "Locator", 0x206, out.types.Url, getLocator }
             },
             methods = {
+              { ".ctor", 0x3, nil },
               { "ReleaseInput", 0x3, ReleaseInput },
               { "RequestInput", 0x3, RequestInput },
               { "final", 0x3, final },
@@ -20002,10 +22391,14 @@ System.namespace("support", function (namespace)
   -- </summary>
   namespace.class("GUIScript_1", function (namespace)
     return function (TProps)
-      local init, final, update, fixed_update, on_message, on_input, on_reload
+      local getLocator, init, final, update, fixed_update, on_message, on_input, on_reload, 
+      __ctor__
+      __ctor__ = function (this)
+        this.Locator = msg.url()
+      end
+      getLocator = System.property("Locator", true)
       -- <summary>
       -- Called when a script component is initialized.
-      -- 
       -- This is a callback-function, which is called by the engine when a script component is initialized. It can be used
       -- to set the initial state of the script.
       -- </summary>
@@ -20014,7 +22407,8 @@ System.namespace("support", function (namespace)
       -- <summary>
       -- Called when a script component is finalized.
       -- This is a callback-function, which is called by the engine when a script component is finalized (destroyed). It can
-      -- be used to e.g. take some last action, report the finalization to other game object instances, delete spawned objects
+      -- be used to e.g. take some last action, report the finalization to other game object instances, delete spawned
+      -- objects
       -- or release user input focus (see `release_input_focus`).
       -- </summary>
       final = function (this)
@@ -20029,7 +22423,6 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called every frame to update the script component.
-      -- 
       -- Frame-rate independent update. dt contains the delta time since the last update.
       -- Useful when you wish to manipulate physics objects at regular intervals to achieve a stable physics simulation.
       -- Requires that `physics.use_fixed_timestep` is enabled in game.project.
@@ -20039,10 +22432,9 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when a message has been sent to the script component.
-      -- 
-      -- This is a callback-function, which is called by the engine whenever a message has been sent to the script component.
+      -- This is a callback-function, which is called by the engine whenever a message has been sent to the script
+      -- component.
       -- It can be used to take action on the message, e.g. send a response back to the sender of the message.
-      -- 
       -- The `message` parameter is a table containing the message data. If the message is sent from the engine, the
       -- documentation of the message specifies which data is supplied.
       -- </summary>
@@ -20053,17 +22445,14 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when user input is received.
-      -- 
-      -- This is a callback-function, which is called by the engine when user input is sent to the game object instance of the script.
+      -- This is a callback-function, which is called by the engine when user input is sent to the game object instance of
+      -- the script.
       -- It can be used to take action on the input, e.g. move the instance according to the input.
-      -- 
       -- For an instance to obtain user input, it must first acquire input focuse through the message `acquire_input_focus`.
       -- See the documentation of that message for more information.
-      -- 
       -- The `action` parameter is a table containing data about the input mapped to the `action_id`.
       -- For mapped actions it specifies the value of the input and if it was just pressed or released.
       -- Actions are mapped to input in an input_binding-file.
-      -- 
       -- Mouse movement is specifically handled and uses `nil` as its `action_id`.
       -- The `action` only contains positional parameters in this case, such as x and y of the pointer.
       -- </summary>
@@ -20075,8 +22464,8 @@ System.namespace("support", function (namespace)
       end
       -- <summary>
       -- Called when the script component is reloaded.
-      -- 
-      -- This is a callback-function, which is called by the engine when the script component is reloaded, e.g. from the editor.
+      -- This is a callback-function, which is called by the engine when the script component is reloaded, e.g. from the
+      -- editor.
       -- It can be used for live development, e.g. to tweak constants or set up the state properly for the instance.
       -- </summary>
       on_reload = function (this)
@@ -20084,9 +22473,11 @@ System.namespace("support", function (namespace)
       return {
         base = function (out)
           return {
-            out.support.ScriptPropertyHost_1(TProps)
+            out.support.ScriptPropertyHost_1(TProps),
+            out.support.IUserComponent
           }
         end,
+        getLocator = getLocator,
         init = init,
         final = final,
         update = update,
@@ -20094,9 +22485,14 @@ System.namespace("support", function (namespace)
         on_message = on_message,
         on_input = on_input,
         on_reload = on_reload,
+        __ctor__ = __ctor__,
         __metadata__ = function (out)
           return {
+            properties = {
+              { "Locator", 0x206, out.types.Url, getLocator }
+            },
             methods = {
+              { ".ctor", 0x3, nil },
               { "final", 0x3, final },
               { "fixed_update", 0x103, fixed_update, System.Single },
               { "init", 0x3, init },
@@ -20118,7 +22514,8 @@ do
 local System = System
 System.namespace("support", function (namespace)
   -- <summary>
-  -- Because Defold will establish properties on the self userobject, we have to create a proxy to source the properties from.
+  -- Because Defold will establish properties on the self userobject, we have to create a proxy to source the properties
+  -- from.
   -- </summary>
   namespace.class("AnimatableProperties", function (namespace)
     local __ctor__
@@ -20246,36 +22643,107 @@ end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("BufferStream", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("DataBuffer", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("GuiTextureType", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("Hash", function (namespace)
+    local op_Implicit, op_Implicit1
+    op_Implicit = function (v)
+      --Doesn't actually get called.  Instead the template is injected.  But we can't extern operators.
+      return hash(v)
+    end
+    op_Implicit1 = function (v)
+      --Doesn't actually get called.  Instead the template is injected.  But we can't extern operators.
+      return v
+    end
+    return {
+      op_Implicit = op_Implicit,
+      op_Implicit1 = op_Implicit1,
+      __metadata__ = function (out)
+        return {
+          methods = {
+            { ".ctor", 0x106, nil, System.String }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.interface("ILuaTable", function ()
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
   namespace.interface("ILuaTableSerializable", function ()
     return {
       __metadata__ = function (out)
@@ -20291,105 +22759,902 @@ end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("LuaArray", function (namespace)
+    return {
+      base = function (out)
+        return {
+          out.types.LuaTableOf_2(System.Int32, out.types.LuaType)
+        }
+      end,
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("LuaArray_1", function (namespace)
+    return function (TValue)
+      return {
+        base = function (out)
+          return {
+            out.types.LuaTableOf_2(System.Int32, TValue)
+          }
+        end,
+        __metadata__ = function (out)
+          return {
+            class = { 0x106, TValue }
+          }
+        end
+      }
+    end
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("LuaTable", function (namespace)
+    return {
+      base = function (out)
+        return {
+          out.types.LuaTableOf_2(out.types.LuaType, out.types.LuaType)
+        }
+      end,
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("LuaTableBase", function (namespace)
+    return {
+      base = function (out)
+        return {
+          out.types.ILuaTable
+        }
+      end,
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("LuaTableOf_2", function (namespace)
+    return function (TKey, TValue)
+      return {
+        base = function (out)
+          return {
+            out.types.LuaTableBase
+          }
+        end,
+        __metadata__ = function (out)
+          return {
+            class = { 0x206, TKey, TValue }
+          }
+        end
+      }
+    end
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("LuaType", function (namespace)
+    local op_Implicit, op_Implicit1, op_Implicit2, op_Implicit3, op_Implicit4, op_Implicit5, op_Implicit6, op_Implicit7, 
+    op_Implicit8, op_Implicit9, op_Implicit10, op_Implicit11
+    op_Implicit = function (v)
+      return nil
+    end
+    op_Implicit1 = function (v)
+      return nil
+    end
+    op_Implicit2 = function (v)
+      return nil
+    end
+    op_Implicit3 = function (v)
+      return nil
+    end
+    op_Implicit4 = function (v)
+      return nil
+    end
+    op_Implicit5 = function (v)
+      return nil
+    end
+    op_Implicit6 = function (v)
+      return nil
+    end
+    op_Implicit7 = function (v)
+      return nil
+    end
+    op_Implicit8 = function (v)
+      return nil
+    end
+    op_Implicit9 = function (v)
+      return nil
+    end
+    op_Implicit10 = function (v)
+      return nil
+    end
+    op_Implicit11 = function (v)
+      return nil
+    end
+    return {
+      op_Implicit = op_Implicit,
+      op_Implicit1 = op_Implicit1,
+      op_Implicit2 = op_Implicit2,
+      op_Implicit3 = op_Implicit3,
+      op_Implicit4 = op_Implicit4,
+      op_Implicit5 = op_Implicit5,
+      op_Implicit6 = op_Implicit6,
+      op_Implicit7 = op_Implicit7,
+      op_Implicit8 = op_Implicit8,
+      op_Implicit9 = op_Implicit9,
+      op_Implicit10 = op_Implicit10,
+      op_Implicit11 = op_Implicit11,
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("Matrix4", function (namespace)
+    return {
+      x = 0,
+      y = 0,
+      u = 0,
+      v = 0,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "u", 0x6, System.Single },
+            { "v", 0x6, System.Single },
+            { "x", 0x6, System.Single },
+            { "y", 0x6, System.Single }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("Node", function (namespace)
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("Quaternion", function (namespace)
+    return {
+      x = 0,
+      y = 0,
+      z = 0,
+      w = 0,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "w", 0x1, System.Single },
+            { "x", 0x1, System.Single },
+            { "y", 0x1, System.Single },
+            { "z", 0x1, System.Single }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  namespace.class("Rect", function (namespace)
+    local InRect, __ctor__
+    __ctor__ = function (this, x, y, width, height)
+      this.X = x
+      this.Y = y
+      this.Width = width
+      this.Height = height
+    end
+    InRect = function (this, targetX, targetY)
+      return this.X <= targetX and targetX <= (this.X + this.Width) and this.Y <= targetY and targetY <= (this.Y + this.Height)
+    end
+    return {
+      X = 0,
+      Y = 0,
+      Width = 0,
+      Height = 0,
+      InRect = InRect,
+      __ctor__ = __ctor__,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "Height", 0x6, System.Double },
+            { "Width", 0x6, System.Double },
+            { "X", 0x6, System.Double },
+            { "Y", 0x6, System.Double }
+          },
+          methods = {
+            { ".ctor", 0x406, nil, System.Double, System.Double, System.Double, System.Double },
+            { "InRect", 0x286, InRect, System.Int32, System.Int32, System.Boolean }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("Url", function (namespace)
+    local __ctor1__, __ctor2__
+    __ctor1__ = function (this)
+    end
+    __ctor2__ = function (this, url)
+    end
+    return {
+      socket = 0,
+      __ctor__ = {
+        __ctor1__,
+        __ctor2__
+      },
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "fragment", 0x6, out.types.Hash },
+            { "path", 0x6, out.types.Hash },
+            { "socket", 0x6, System.Int32 }
+          },
+          methods = {
+            { ".ctor", 0x6, __ctor1__ },
+            { ".ctor", 0x106, __ctor2__, System.String }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("Vector2", function (namespace)
+    local op_Implicit
+    op_Implicit = function (v)
+      return nil
+    end
+    return {
+      x = 0,
+      y = 0,
+      op_Implicit = op_Implicit,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "x", 0x6, System.Single },
+            { "y", 0x6, System.Single }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 do
 local System = System
 System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("Vector3", function (namespace)
+    return {
+      x = 0,
+      y = 0,
+      z = 0,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "x", 0x6, System.Double },
+            { "y", 0x6, System.Double },
+            { "z", 0x6, System.Double }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.class("Vector4", function (namespace)
+    return {
+      x = 0,
+      y = 0,
+      u = 0,
+      v = 0,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "u", 0x6, System.Single },
+            { "v", 0x6, System.Single },
+            { "x", 0x6, System.Single },
+            { "y", 0x6, System.Single }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("support", function (namespace)
+  namespace.class("BuiltInComponentBase", function (namespace)
+    local getLocator, setLocator, AssignLocator, EnableCaching, op_Implicit
+    getLocator, setLocator = System.property("Locator")
+    AssignLocator = function (this, locator)
+      this.Locator = locator:FetchUrl()
+    end
+    EnableCaching = function (this)
+      this.IsCachingEnabled = false
+    end
+    op_Implicit = function (self)
+      return getLocator(self)
+    end
+    return {
+      base = function (out)
+        return {
+          out.support.IBuiltInComponent
+        }
+      end,
+      IsCachingEnabled = false,
+      getLocator = getLocator,
+      setLocator = setLocator,
+      AssignLocator = AssignLocator,
+      EnableCaching = EnableCaching,
+      op_Implicit = op_Implicit,
+      __metadata__ = function (out)
+        return {
+          properties = {
+            { "IsCachingEnabled", 0x6, System.Boolean },
+            { "Locator", 0x106, out.types.Url, getLocator, setLocator }
+          },
+          methods = {
+            { "AssignLocator", 0x106, AssignLocator, out.support.ComponentLocator },
+            { "EnableCaching", 0x6, EnableCaching }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+local support
+local supportComponent
+local types
+local DictUrlComponentRecord
+System.import(function (out)
+  support = out.support
+  supportComponent = support.Component
+  types = out.types
+  DictUrlComponentRecord = System.Dictionary(types.Url, supportComponent.ComponentRecord)
+end)
+System.namespace("support", function (namespace)
+  -- <summary>
+  -- Generic access for both builtin components and user components.
+  -- </summary>
+  namespace.class("Component", function (namespace)
+    local ComponentsByLocator, builtInType, userComponentType, Register, At, At1, AtUser, AtBuiltIn, 
+    class, static
+    namespace.class("ComponentRecord", function (namespace)
+      local __ctor__
+      __ctor__ = function (this, type, data)
+        this.type = type
+        this.data = data
+      end
+      return {
+        __ctor__ = __ctor__,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "data", 0x6, System.Object },
+              { "type", 0x6, System.Type }
+            },
+            methods = {
+              { ".ctor", 0x206, nil, System.Type, System.Object }
+            },
+            class = { 0x1 }
+          }
+        end
+      }
+    end)
+    static = function (this)
+      ComponentsByLocator = DictUrlComponentRecord()
+      builtInType = System.typeof(support.IBuiltInComponent)
+      userComponentType = System.typeof(support.IUserComponent)
+    end
+    Register = function (locator, data, TComponent)
+      local newRecord = class.ComponentRecord(System.typeof(TComponent), data)
+      ComponentsByLocator:AddKeyValue(locator, newRecord)
+    end
+    At = function (locator, TComponent)
+      if builtInType:IsAssignableFrom(System.typeof(TComponent)) then
+        return AtBuiltIn(locator, true, TComponent)
+      end
+      if userComponentType:IsAssignableFrom(System.typeof(TComponent)) then
+        return AtUser(locator, TComponent)
+      end
+
+      pprint("Unhandled component type!  " .. System.typeof(TComponent):getName())
+      System.throw(System.NotImplementedException())
+    end
+    At1 = function (locator, cacheInternals, TComponent)
+      if builtInType:IsAssignableFrom(System.typeof(TComponent)) then
+        return AtBuiltIn(locator, cacheInternals, TComponent)
+      end
+
+      pprint("At called with caching parameter on non-builtin component type " .. System.typeof(TComponent):getName())
+      System.throw(System.NotImplementedException())
+    end
+    -- <summary>
+    -- Specialized variant that will handle a USERCOMPONENT only.  But exists as an unsafe private that supposedly
+    -- allows any component.  However, it really only supports IUserComponent.
+    -- </summary>
+    -- <param name="locator"></param>
+    -- <typeparam name="TComponent"></typeparam>
+    -- <returns></returns>
+    -- <exception cref="InvalidCastException"></exception>
+    -- <exception cref="KeyNotFoundException"></exception>
+    AtUser = function (locator, TComponent)
+      local url = locator:FetchUrl()
+
+      local default, existingRecord = ComponentsByLocator:TryGetValue(url, nil)
+      if default then
+        if not existingRecord.type:IsAssignableTo(System.typeof(TComponent)) then
+          System.throw(System.InvalidCastException("Requesting component of type " .. System.typeof(TComponent):getName() .. ", but record for component is " .. existingRecord.type:getName()))
+        else
+          return existingRecord.data
+        end
+      else
+        pprint("Component of type (" .. System.typeof(TComponent):getName() .. ") at the specified address could not be found.")
+        pprint(url)
+        System.throw(System.KeyNotFoundException())
+      end
+    end
+    -- <summary>
+    -- Specialized variant that will handle a USERCOMPONENT only.  But exists as an unsafe private that supposedly
+    -- allows any component.  However, it really only supports IBuiltInComponent.
+    -- </summary>
+    -- <param name="locator"></param>
+    -- <typeparam name="TComponent"></typeparam>
+    -- <returns></returns>
+    -- <exception cref="InvalidCastException"></exception>
+    -- <exception cref="KeyNotFoundException"></exception>
+    AtBuiltIn = function (locator, cacheInternals, TComponent)
+      local cache = cacheInternals
+
+      local url = locator:FetchUrl()
+
+      local default, existingRecord = ComponentsByLocator:TryGetValue(url, nil)
+      if default then
+        if not existingRecord.type:IsAssignableTo(System.typeof(TComponent)) then
+          System.throw(System.InvalidCastException("Requesting component of type " .. System.typeof(TComponent):getName() .. ", but record for component is " .. existingRecord.type:getName()))
+        else
+          return existingRecord.data
+        end
+      else
+        local newComponent = TComponent()
+        newComponent:AssignLocator(locator)
+        Register(url, newComponent, TComponent)
+        if cache then
+          newComponent:EnableCaching()
+        end
+        return newComponent
+      end
+    end
+    class = {
+      DefaultToCaching = true,
+      Register = Register,
+      At = At,
+      At1 = At1,
+      static = static,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "ComponentsByLocator", 0x9, System.Dictionary(out.types.Url, out.support.Component.ComponentRecord) },
+            { "DefaultToCaching", 0xE, System.Boolean },
+            { "builtInType", 0x9, System.Type },
+            { "userComponentType", 0x9, System.Type }
+          },
+          methods = {
+            { "At", 0x1018E, At, function (TComponent) return out.support.ComponentLocator, TComponent end },
+            { "At", 0x1028E, At1, function (TComponent) return out.support.ComponentLocator, System.Boolean, TComponent end },
+            { "AtBuiltIn", 0x10289, AtBuiltIn, function (TComponent) return out.support.ComponentLocator, System.Boolean, TComponent end },
+            { "AtUser", 0x10189, AtUser, function (TComponent) return out.support.ComponentLocator, TComponent end },
+            { "Register", 0x1020E, Register, function (TComponent) return out.types.Url, TComponent end }
+          },
+          class = { 0xE }
+        }
+      end
+    }
+    return class
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("support", function (namespace)
+  namespace.class("ComponentLocator", function (namespace)
+    local FetchUrl, __ctor1__, __ctor2__, __ctor3__
+    __ctor1__ = function (this, url)
+      this._url = url
+    end
+    -- <summary>
+    -- Resolves the component relative to the current game object.
+    -- </summary>
+    -- <param name="componentName"></param>
+    __ctor2__ = function (this, componentName)
+      local url = msg.url()
+      url.path = go.get_id()
+      url.fragment = hash(componentName)
+      this._url = url
+    end
+    -- <summary>
+    -- Resolves the component relative to the specified game object
+    -- </summary>
+    -- <param name="gameobjectPath"></param>
+    -- <param name="componentName"></param>
+    __ctor3__ = function (this, gameobjectPath, componentName)
+      local url = msg.url()
+      url.path = go.get_id(gameobjectPath)
+      url.fragment = hash(componentName)
+      this._url = url
+    end
+    FetchUrl = function (this)
+      return this._url
+    end
+    return {
+      FetchUrl = FetchUrl,
+      __ctor__ = {
+        __ctor1__,
+        __ctor2__,
+        __ctor3__
+      },
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "_url", 0x1, out.types.Url }
+          },
+          methods = {
+            { ".ctor", 0x106, __ctor1__, out.types.Url },
+            { ".ctor", 0x106, __ctor2__, System.String },
+            { ".ctor", 0x206, __ctor3__, System.String, System.String },
+            { "FetchUrl", 0x86, FetchUrl, out.types.Url }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("support", function (namespace)
+  namespace.class("ComponentReference", function (namespace)
+    local AssignLocatorInternal, op_Implicit
+    AssignLocatorInternal = function (this, locator)
+      this.Locator = this.Locator
+    end
+    op_Implicit = function (self)
+      return self.Locator
+    end
+    return {
+      AssignLocatorInternal = AssignLocatorInternal,
+      op_Implicit = op_Implicit,
+      __metadata__ = function (out)
+        return {
+          properties = {
+            { "Locator", 0x6, out.types.Url }
+          },
+          methods = {
+            { "AssignLocatorInternal", 0x103, AssignLocatorInternal, out.types.Url }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("support", function (namespace)
+  namespace.interface("IBuiltInComponent", function ()
+    return {
+      base = function (out)
+        return {
+          out.support.IComponent
+        }
+      end,
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("support", function (namespace)
+  namespace.interface("ICachedData", function ()
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("support", function (namespace)
+  namespace.interface("IComponent", function ()
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("support", function (namespace)
+  namespace.interface("IUserComponent", function ()
+    return {
+      base = function (out)
+        return {
+          out.support.IComponent
+        }
+      end,
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
 
 end
 System.init({
   types = {
+    "support.IComponent",
     "support.GeneratedScript",
+    "support.IBuiltInComponent",
     "support.ScriptPropertyHost_1",
+    "support.IUserComponent",
+    "types.ILuaTable",
     "types.ILuaTableSerializable",
+    "support.BuiltInComponentBase",
     "support.GUIScript_1",
     "support.AnimatableProperties",
     "support.GameObjectScript_1",
-    "CustomMessageImplementation",
+    "types.LuaTableBase",
+    "MessageImplementation",
+    "Camera",
+    "CollectionFactory",
+    "Collectionproxy",
+    "Go",
+    "Gui",
     "support.GUIScript",
+    "Model",
+    "Physics",
     "support.GameObjectScript",
+    "Render",
     "RocketProperties",
+    "Sound",
+    "Sprite",
+    "Sys",
     "attributes.PropertyProxyHandling",
+    "support.Component",
+    "types.LuaTableOf_2",
+    "types.LuaType",
     "AddScoreMessage",
+    "Buffer",
+    "Builtins",
+    "Camera.acquire_camera_focus_message",
+    "Camera.release_camera_focus_message",
+    "Camera.set_camera_message",
+    "CollectionFactory.CollectionFactoryCreateResult",
+    "Collectionproxy.async_load_message",
+    "Collectionproxy.disable_message",
+    "Collectionproxy.enable_message",
+    "Collectionproxy.final_message",
+    "Collectionproxy.init_message",
+    "Collectionproxy.load_message",
+    "Collectionproxy.proxy_loaded_message",
+    "Collectionproxy.proxy_unloaded_message",
+    "Collectionproxy.set_time_step_message",
+    "Collectionproxy.unload_message",
     "CommonInput",
+    "Crash",
+    "Facebook",
+    "Factory",
+    "Go.acquire_input_focus_message",
+    "Go.disable_message",
+    "Go.enable_message",
+    "Go.release_input_focus_message",
+    "Go.set_parent_message",
+    "Gui.layout_changed_message",
+    "Html5",
+    "Http",
+    "Iac",
+    "Iap",
+    "Image",
+    "Json",
+    "Label",
     "MainUI",
+    "Math",
     "Message",
+    "Model.model_animation_done_message",
+    "Msg",
+    "Particlefx",
+    "Physics.apply_force_message",
+    "Physics.collision_response_message",
+    "Physics.contact_point_response_message",
+    "Physics.ray_cast_missed_message",
+    "Physics.ray_cast_response_message",
+    "Physics.trigger_response_message",
     "Player",
+    "Profiler",
+    "Push",
+    "Render.clear_color_message",
+    "Render.draw_debug_text_message",
+    "Render.draw_line_message",
+    "Render.resize_message",
+    "Render.window_resized_message",
+    "Resource",
     "Rocket",
-    "StandardMessageImplementation",
+    "Sound.play_sound_message",
+    "Sound.set_gain_message",
+    "Sound.sound_done_message",
+    "Sound.stop_sound_message",
+    "Sprite.animation_done_message",
+    "Sprite.play_animation_message",
+    "Sys.exit_message",
+    "Sys.reboot_message",
+    "Sys.set_update_frequency_message",
+    "Sys.set_vsync_message",
+    "Sys.start_record_message",
+    "Sys.stop_record_message",
+    "Sys.toggle_physics_debug_message",
+    "Sys.toggle_profile_message",
+    "Tilemap",
+    "Timer",
+    "Vmath",
+    "Webview",
+    "Window",
+    "Zlib",
     "attributes.DefoldPropertyProxyGenAttribute",
     "attributes.DoNotGenerateAttribute",
+    "support.Component.ComponentRecord",
+    "support.ComponentLocator",
+    "support.ComponentReference",
     "support.DoNotGenerateAttribute",
-    "support.LuaTableSerializableExt"
+    "support.ICachedData",
+    "support.LuaTableSerializableExt",
+    "types.BufferStream",
+    "types.DataBuffer",
+    "types.GuiTextureType",
+    "types.Hash",
+    "types.LuaArray",
+    "types.LuaArray_1",
+    "types.LuaTable",
+    "types.Matrix4",
+    "types.Node",
+    "types.Quaternion",
+    "types.Rect",
+    "types.Url",
+    "types.Vector2",
+    "types.Vector3",
+    "types.Vector4"
   }
 })
 
