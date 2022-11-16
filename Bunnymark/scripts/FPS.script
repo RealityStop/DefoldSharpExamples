@@ -1,0 +1,18 @@
+require "scripts.out"
+go.property("sampleCount", 60)
+
+function init(self)
+	self.script = FPS()
+	self.script:AssignProperties(self)
+	support.Component.Register(self.script.LocatorUrl, self.script, FPS)
+	self.script:init()
+end
+
+function final(self)
+	self.script:final()
+end
+
+function update(self, dt)
+	self.script:update(dt)
+end
+

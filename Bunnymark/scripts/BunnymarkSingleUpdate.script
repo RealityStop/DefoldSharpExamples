@@ -1,0 +1,21 @@
+require "scripts.out"
+
+function init(self)
+	self.script = BunnymarkSingleUpdate()
+	self.script:AssignProperties(self)
+	support.Component.Register(self.script.LocatorUrl, self.script, BunnymarkSingleUpdate)
+	self.script:init()
+end
+
+function final(self)
+	self.script:final()
+end
+
+function update(self, dt)
+	self.script:update(dt)
+end
+
+function on_input(self, action_id, action)
+	return self.script:on_input(action_id, action)
+end
+

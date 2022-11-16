@@ -1,0 +1,21 @@
+require "scripts.out"
+
+function init(self)
+	self.script = Bunnymark_GUI()
+	self.script:AssignProperties(self)
+	support.Component.Register(self.script.LocatorUrl, self.script, Bunnymark_GUI)
+	self.script:init()
+end
+
+function final(self)
+	self.script:final()
+end
+
+function on_message(self, message_id, message, sender)
+	self.script:on_message(message_id, message, sender)
+end
+
+function on_input(self, action_id, action)
+	return self.script:on_input(action_id, action)
+end
+

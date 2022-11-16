@@ -1,0 +1,13 @@
+require "scripts.out"
+
+function init(self)
+	self.script = GuiAnimateGui()
+	self.script:AssignProperties(self)
+	support.Component.Register(self.script.LocatorUrl, self.script, GuiAnimateGui)
+	self.script:init()
+end
+
+function final(self)
+	self.script:final()
+end
+

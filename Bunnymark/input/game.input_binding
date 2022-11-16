@@ -1,0 +1,8 @@
+key_trigger {
+  input: KEY_F12
+  action: "toggledebug"
+}
+mouse_trigger {
+  input: MOUSE_BUTTON_1
+  action: "touch"
+}
