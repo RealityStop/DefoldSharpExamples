@@ -3,11 +3,19 @@ require "scripts.out"
 function init(self)
 	self.script = MainUI()
 	self.script:AssignProperties(self)
-	support.Component.Register(self.script.Locator, self.script, MainUI)
+	support.Component.Register(self.script.LocatorUrl, self.script, MainUI)
 	self.script:init()
 end
 
-function on_message(self, message, sender)
-	self.script:on_message(message, sender)
+function final(self)
+	self.script:final()
+end
+
+function update(self, dt)
+	self.script:update(dt)
+end
+
+function on_message(self, message_id, message, sender)
+	self.script:on_message(message_id, message, sender)
 end
 

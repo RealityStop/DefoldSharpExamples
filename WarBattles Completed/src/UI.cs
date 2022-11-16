@@ -12,19 +12,38 @@ public class AddScoreMessage : MessageImplementation
 	}
 }
 
+
+public class TankCountMessage : MessageImplementation
+{
+	public int newCount;
+	
+	public override Hash FetchCode() => "tankcount";
+}
+
+
 public class MainUI : GUIScript
 {
 	private Node _scoreNode;
 	private float _scoreTotal;
+	private Node _fpsNode;
+	private Node _tankCountNode;
 
 
 	protected override void init()
 	{
 		_scoreNode = Gui.get_node("score");
+		_fpsNode = Gui.get_node("fps");
+		_tankCountNode = Gui.get_node("tankCount");
 	}
 
 
-	protected override void on_message(Hash message_id, object message, object sender)
+	protected override void update(float dt)
+	{
+		Gui.set_text(_fpsNode, "FPS: " + FPS.Fps);
+	}
+
+
+	protected override void on_message(Hash message_id, object message, Hash sender)
 	{
 		// A special API is provided to detect and allow us to operate on the data in a type-safe way.
 		// If the reconstruct metadata is false (default), no actual conversion takes place.  When true, it
@@ -34,6 +53,11 @@ public class MainUI : GUIScript
 		{
 			_scoreTotal += impl.scoreChange;
 			Gui.set_text(_scoreNode, "SCORE: " + _scoreTotal);
+		}
+
+		if (Message.IsMessage<TankCountMessage>(message_id, message, out var tankCountData))
+		{
+			Gui.set_text(_tankCountNode, "Tanks: " + tankCountData.newCount);
 		}
 	}
 }

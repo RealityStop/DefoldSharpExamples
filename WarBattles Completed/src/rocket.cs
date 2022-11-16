@@ -18,7 +18,7 @@ public class Rocket : GameObjectScript<RocketProperties>
 
 	protected override void init()
 	{
-		_sprite = Component.At<Sprite>(new ComponentLocator("sprite"), true);
+		_sprite = Gameobject.Component<Sprite>("sprite");
 	}
 
 
@@ -48,7 +48,7 @@ public class Rocket : GameObjectScript<RocketProperties>
 	}
 
 
-	protected override void on_message(Hash message_id, object message, object sender)
+	protected override void on_message(Hash message_id, object message, Hash sender)
 	{
 		if (Message.IsMessage<Sprite.animation_done_message>(message_id, message, out var doneMessage))
 			Go.delete();

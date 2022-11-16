@@ -1,4 +1,4 @@
-﻿using support;
+using support;
 using types;
 
 public class Player : GameObjectScript
@@ -13,8 +13,8 @@ public class Player : GameObjectScript
 
 	protected override void init()
 	{
-		_rocketFactory = Component.At<Factory>(new ComponentLocator("rocketfactory"), true);
-		
+		_rocketFactory = Gameobject.Component<Factory>("rocketfactory");
+
 		RequestInput();
 	}
 

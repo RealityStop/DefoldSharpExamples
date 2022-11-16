@@ -19097,10 +19097,113 @@ end)
 end
 do
 local System = System
-local support
-System.import(function (out)
-  support = out.support
+local ArrayDouble = System.Array(System.Double)
+System.namespace("", function (namespace)
+  namespace.class("FPSProperties", function (namespace)
+    return {
+      base = function (out)
+        return {
+          out.support.AnimatableProperties
+        }
+      end,
+      sampleCount = 60,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "sampleCount", 0x6, System.Int32 }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
 end)
+System.namespace("", function (namespace)
+  namespace.class("FPS", function (namespace)
+    local init, update, class
+    namespace.class("SimpleMovingAverage", function (namespace)
+      local Update, __ctor__
+      __ctor__ = function (this, k)
+        this._k = System.toInt32(k)
+        this._values = ArrayDouble(k)
+      end
+      Update = function (this, nextInput)
+        -- calculate the new sum
+        this._sum = this._sum - this._values:get(this._index) + nextInput
+
+        -- overwrite the old value with the new one
+        this._values:set(this._index, nextInput)
+
+        -- increment the index (wrapping back to 0)
+        this._index = System.mod((this._index + 1), this._k)
+
+        -- calculate the average
+        return this._sum / this._k
+      end
+      return {
+        _k = 0,
+        _index = 0,
+        _sum = 0,
+        Update = Update,
+        __ctor__ = __ctor__,
+        __metadata__ = function (out)
+          return {
+            fields = {
+              { "_index", 0x1, System.Int32 },
+              { "_k", 0x1, System.Int32 },
+              { "_sum", 0x1, System.Double },
+              { "_values", 0x1, System.Array(System.Double) }
+            },
+            methods = {
+              { ".ctor", 0x106, nil, System.UInt32 },
+              { "Update", 0x186, Update, System.Double, System.Double }
+            },
+            class = { 0x6 }
+          }
+        end
+      }
+    end)
+    init = function (this)
+      this.sma = class.SimpleMovingAverage(60)
+    end
+    update = function (this, dt)
+      class.Fps = 1 / this.sma:Update(dt)
+      class.LowFPS = class.Fps < 60
+    end
+    class = {
+      base = function (out)
+        return {
+          out.support.GameObjectScript_1(out.FPSProperties)
+        }
+      end,
+      LowFPS = false,
+      Fps = 0,
+      init = init,
+      update = update,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "sma", 0x1, class.SimpleMovingAverage }
+          },
+          properties = {
+            { "Fps", 0xE, System.Double },
+            { "LowFPS", 0xE, System.Boolean }
+          },
+          methods = {
+            { "init", 0x3, init },
+            { "update", 0x103, update, System.Single }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+    return class
+  end)
+end)
+
+end
+do
+local System = System
 System.namespace("", function (namespace)
   namespace.class("Player", function (namespace)
     local init, on_input, update, __ctor__
@@ -19110,7 +19213,7 @@ System.namespace("", function (namespace)
       System.base(this).__ctor__(this)
     end
     init = function (this)
-      this._rocketFactory = support.Component.At1(System.new(support.ComponentLocator, 2, "rocketfactory"), true, Factory)
+      this._rocketFactory = this:getGameobject():Component(hash("rocketfactory"), Factory)
 
       this:RequestInput()
     end
@@ -19193,11 +19296,9 @@ do
 local System = System
 local Physics
 local Sprite
-local support
 System.import(function (out)
   Physics = out.Physics
   Sprite = out.Sprite
-  support = out.support
 end)
 System.namespace("", function (namespace)
   namespace.class("RocketProperties", function (namespace)
@@ -19231,7 +19332,7 @@ System.namespace("", function (namespace)
       explosion = hash("explosion")
     end
     init = function (this)
-      this._sprite = support.Component.At1(System.new(support.ComponentLocator, 2, "sprite"), true, Sprite)
+      this._sprite = this:getGameobject():Component(hash("sprite"), Sprite)
     end
     update = function (this, dt)
       --If we've already exploded, there's no need for any movement or secondary explosions.
@@ -19269,7 +19370,7 @@ System.namespace("", function (namespace)
         go.delete(impl.other_id, true)
         local ref = AddScoreMessage()
         ref.scoreChange = 100
-        Message.postMessage6("/gui#ui", ref, AddScoreMessage)
+        Message.postMessage3("/gui#ui", ref)
       end
     end
     return {
@@ -19297,7 +19398,169 @@ System.namespace("", function (namespace)
           methods = {
             { "Explode", 0x1, Explode },
             { "init", 0x3, init },
-            { "on_message", 0x303, on_message, out.types.Hash, System.Object, System.Object },
+            { "on_message", 0x303, on_message, out.types.Hash, System.Object, out.types.Hash },
+            { "update", 0x103, update, System.Single }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+local support
+System.import(function (out)
+  support = out.support
+end)
+System.namespace("", function (namespace)
+  namespace.class("TankProperties", function (namespace)
+    return {
+      base = function (out)
+        return {
+          out.support.AnimatableProperties
+        }
+      end,
+      speed = 50,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "speed", 0x6, System.Double }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+System.namespace("", function (namespace)
+  namespace.class("Tank", function (namespace)
+    local _rand, update, static, __ctor__
+    static = function (this)
+      _rand = System.Random()
+    end
+    __ctor__ = function (this)
+      this.targetPos = vmath.vector3()
+      System.base(this).__ctor__(this)
+    end
+    update = function (this, dt)
+      support.GameObjectReference.CurrentGameObject = this:getGameobject()
+      local gameobject = this:getGameobject()
+      local curPos = gameobject:getWorldPosition()
+
+      local todestination = this.targetPos - curPos
+      if vmath.length_sqr(todestination) > 1 then
+        gameobject:setPosition(curPos + vmath.normalize(todestination) * this.Properties.speed * dt)
+      else
+        this.targetPos = vmath.vector3(math.random(400),math.random(400),0)
+        --targetPos = new Vector2((float)_rand.NextDouble()*400, (float)_rand.NextDouble()*400);
+      end
+
+      support.GameObjectReference.CurrentGameObject = nil
+    end
+    return {
+      base = function (out)
+        return {
+          out.support.GameObjectScript_1(out.TankProperties)
+        }
+      end,
+      update = update,
+      static = static,
+      __ctor__ = __ctor__,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "_rand", 0x9, System.Random },
+            { "targetPos", 0x1, out.types.Vector3 }
+          },
+          methods = {
+            { "update", 0x103, update, System.Single }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  namespace.class("SpawnSettings", function (namespace)
+    return {
+      base = function (out)
+        return {
+          out.support.AnimatableProperties
+        }
+      end,
+      delay = 2,
+      burst = 300,
+      minFPS = 50,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "burst", 0x6, System.Int32 },
+            { "delay", 0x6, System.Double },
+            { "minFPS", 0x6, System.Double }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+System.namespace("", function (namespace)
+  namespace.class("TankSpawner", function (namespace)
+    local init, update, SpawnTank
+    init = function (this)
+      this._tankFactory = this:getGameobject():Component(hash("tankFactory"), Factory)
+
+      for i = 0, this.Properties.burst - 1 do
+        SpawnTank(this)
+      end
+    end
+    update = function (this, dt)
+      if FPS.Fps < this.Properties.minFPS then
+        this._timer = this.Properties.delay
+      else
+        this._timer = this._timer - dt
+        if this._timer <= 0 then
+          SpawnTank(this)
+          this._timer = this.Properties.delay
+        end
+      end
+    end
+    SpawnTank = function (this)
+      this._tankFactory:Create()
+      local default = TankCountMessage()
+      local extern = this._tankCount + 1
+      this._tankCount = extern
+      default.newCount = extern
+      Message.postMessage3("/gui#ui", default)
+    end
+    return {
+      base = function (out)
+        return {
+          out.support.GameObjectScript_1(out.SpawnSettings)
+        }
+      end,
+      _timer = 1,
+      _tankCount = 0,
+      init = init,
+      update = update,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "_tankCount", 0x1, System.Int32 },
+            { "_tankFactory", 0x1, out.Factory },
+            { "_timer", 0x1, System.Double }
+          },
+          methods = {
+            { "SpawnTank", 0x1, SpawnTank },
+            { "init", 0x3, init },
             { "update", 0x103, update, System.Single }
           },
           class = { 0x6 }
@@ -19339,10 +19602,43 @@ System.namespace("", function (namespace)
   end)
 end)
 System.namespace("", function (namespace)
+  namespace.class("TankCountMessage", function (namespace)
+    local FetchCode
+    FetchCode = function (this)
+      return hash("tankcount")
+    end
+    return {
+      base = function (out)
+        return {
+          out.MessageImplementation
+        }
+      end,
+      newCount = 0,
+      FetchCode = FetchCode,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "newCount", 0x6, System.Int32 }
+          },
+          methods = {
+            { "FetchCode", 0x86, FetchCode, out.types.Hash }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+System.namespace("", function (namespace)
   namespace.class("MainUI", function (namespace)
-    local init, on_message
+    local init, update, on_message
     init = function (this)
       this._scoreNode = gui.get_node("score")
+      this._fpsNode = gui.get_node("fps")
+      this._tankCountNode = gui.get_node("tankCount")
+    end
+    update = function (this, dt)
+      gui.set_text(this._fpsNode, "FPS: " .. FPS.Fps)
     end
     on_message = function (this, message_id, message, sender)
       -- A special API is provided to detect and allow us to operate on the data in a type-safe way.
@@ -19354,6 +19650,11 @@ System.namespace("", function (namespace)
         this._scoreTotal = this._scoreTotal + impl.scoreChange
         gui.set_text(this._scoreNode, "SCORE: " .. this._scoreTotal)
       end
+
+      local extern, tankCountData = Message.IsMessage1(message_id, message, nil, false, TankCountMessage)
+      if extern then
+        gui.set_text(this._tankCountNode, "Tanks: " .. tankCountData.newCount)
+      end
     end
     return {
       base = function (out)
@@ -19363,16 +19664,20 @@ System.namespace("", function (namespace)
       end,
       _scoreTotal = 0,
       init = init,
+      update = update,
       on_message = on_message,
       __metadata__ = function (out)
         return {
           fields = {
+            { "_fpsNode", 0x1, out.types.Node },
             { "_scoreNode", 0x1, out.types.Node },
-            { "_scoreTotal", 0x1, System.Single }
+            { "_scoreTotal", 0x1, System.Single },
+            { "_tankCountNode", 0x1, out.types.Node }
           },
           methods = {
             { "init", 0x3, init },
-            { "on_message", 0x303, on_message, out.types.Hash, System.Object, System.Object }
+            { "on_message", 0x303, on_message, out.types.Hash, System.Object, out.types.Hash },
+            { "update", 0x103, update, System.Single }
           },
           class = { 0x6 }
         }
@@ -19634,12 +19939,18 @@ end)
 end
 do
 local System = System
+local support
+System.import(function (out)
+  support = out.support
+end)
 System.namespace("", function (namespace)
   -- <summary>
   -- Collection proxy API documentation
   -- 
   -- </summary>
-  namespace.class("Collectionproxy", function (namespace)
+  namespace.class("CollectionProxy", function (namespace)
+    local Load, LoadAsync, Init, Enable, Disable, Final, Unload, SetTimeStep, 
+    class
     -- <summary>
     -- </summary>
     namespace.class("set_time_step_message", function (namespace)
@@ -19964,13 +20275,98 @@ System.namespace("", function (namespace)
       }
       return class
     end)
-    return {
+    -- <summary>
+    -- Posts a load message to the collection-proxy-component to start the loading of the referenced collection. When the loading has completed, the message proxy_loaded will be sent back to the script. A loaded collection must be initialized (message init) and enabled (message enable) in order to be simulated and drawn.
+    -- </summary>
+    Load = function (this)
+      local message = class.load_message()
+      Message.postMessage5(support.BuiltInComponentBase.op_Implicit(this), message)
+    end
+    -- <summary>
+    -- Posts a async_load message to a collection-proxy-component to start background loading of the referenced collection. When the loading has completed, the message proxy_loaded will be sent back to the script. A loaded collection must be initialized (message init) and enabled (message enable) in order to be simulated and drawn.
+    -- </summary>
+    LoadAsync = function (this)
+      local message = class.async_load_message()
+      Message.postMessage5(support.BuiltInComponentBase.op_Implicit(this), message)
+    end
+    -- <summary>
+    -- Post this message to a collection-proxy-component to initialize the game objects and components in the referenced collection. Sending enable to an uninitialized collection proxy automatically initializes it. The init message simply provides a higher level of control.
+    -- </summary>
+    Init = function (this)
+      local message = class.init_message()
+      Message.postMessage5(support.BuiltInComponentBase.op_Implicit(this), message)
+    end
+    -- <summary>
+    -- Post this message to a collection-proxy-component to enable the referenced collection, which in turn enables the contained game objects and components. If the referenced collection was not initialized prior to this call, it will automatically be initialized.
+    -- </summary>
+    Enable = function (this)
+      local message = class.enable_message()
+      Message.postMessage5(support.BuiltInComponentBase.op_Implicit(this), message)
+    end
+    -- <summary>
+    -- Post this message to a collection-proxy-component to disable the referenced collection, which in turn disables the contained game objects and components.
+    -- </summary>
+    Disable = function (this)
+      local message = class.disable_message()
+      Message.postMessage5(support.BuiltInComponentBase.op_Implicit(this), message)
+    end
+    -- <summary>
+    -- Post this message to a collection-proxy-component to finalize the referenced collection, which in turn finalizes the contained game objects and components.
+    -- </summary>
+    Final = function (this)
+      local message = class.final_message()
+      Message.postMessage5(support.BuiltInComponentBase.op_Implicit(this), message)
+    end
+    -- <summary>
+    -- Post this message to a collection-proxy-component to start the unloading of the referenced collection. When the unloading has completed, the message proxy_unloaded will be sent back to the script.
+    -- </summary>
+    Unload = function (this)
+      local message = class.unload_message()
+      Message.postMessage5(support.BuiltInComponentBase.op_Implicit(this), message)
+    end
+    -- <summary>
+    -- Post this message to a collection-proxy-component to modify the time-step used when updating the collection controlled by the proxy. The time-step is modified by a scaling factor and can be incremented either continuously or in discrete steps. The continuous mode can be used for slow-motion or fast-forward effects. The discrete mode is only useful when scaling the time-step to pass slower than real time (factor is below 1). The time-step will then be set to 0 for as many frames as the scaling demands and then take on the full real-time-step for one frame, to simulate pulses. E.g. if factor is set to 0.1 the time-step would be 0 for 9 frames, then be 1/60 for one frame, 0 for 9 frames, and so on. The result in practice is that the game looks like it's updated at a much lower frequency than 60 Hz, which can be useful for debugging when each frame needs to be inspected.
+    -- </summary>
+    -- <param name="factor"></param>
+    -- <param name="mode"></param>
+    SetTimeStep = function (this, factor, mode)
+      local default = class.set_time_step_message()
+      default.factor = factor
+      default.mode = mode
+      local message = default
+      Message.postMessage5(support.BuiltInComponentBase.op_Implicit(this), message)
+    end
+    class = {
+      base = function (out)
+        return {
+          out.support.BuiltInComponentBase
+        }
+      end,
+      Load = Load,
+      LoadAsync = LoadAsync,
+      Init = Init,
+      Enable = Enable,
+      Disable = Disable,
+      Final = Final,
+      Unload = Unload,
+      SetTimeStep = SetTimeStep,
       __metadata__ = function (out)
         return {
-          class = { 0xE }
+          methods = {
+            { "Disable", 0x6, Disable },
+            { "Enable", 0x6, Enable },
+            { "Final", 0x6, Final },
+            { "Init", 0x6, Init },
+            { "Load", 0x6, Load },
+            { "LoadAsync", 0x6, LoadAsync },
+            { "SetTimeStep", 0x206, SetTimeStep, System.Double, System.Int32 },
+            { "Unload", 0x6, Unload }
+          },
+          class = { 0x6 }
         }
       end
     }
+    return class
   end)
 end)
 
@@ -19986,6 +20382,66 @@ System.namespace("", function (namespace)
     return {
       __metadata__ = function (out)
         return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  namespace.class("Debug", function (namespace)
+    local _hook, _mask, _count, _debuggingEnabled, SetEditorDebug, ToggleEditorDebug, static
+    static = function (this)
+      if sys.get_engine_info().is_debug then
+        _debuggingEnabled = true
+
+        local default
+        default, _mask, _count = debug.gethook()
+        _hook = default
+      end
+    end
+    _debuggingEnabled = true
+    SetEditorDebug = function (shouldDebug)
+      if not sys.get_engine_info().is_debug then
+        return
+      end
+
+      if shouldDebug then
+        debug.sethook(_hook,_mask,_count)
+        _debuggingEnabled = true
+      else
+        debug.sethook()
+        _debuggingEnabled = false
+      end
+    end
+    ToggleEditorDebug = function ()
+      if not sys.get_engine_info().is_debug then
+        return false
+      end
+
+      SetEditorDebug(not _debuggingEnabled)
+      return _debuggingEnabled
+    end
+    return {
+      SetEditorDebug = SetEditorDebug,
+      ToggleEditorDebug = ToggleEditorDebug,
+      static = static,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "_count", 0x9, System.Object },
+            { "_debuggingEnabled", 0x9, System.Boolean },
+            { "_hook", 0x9, System.Object },
+            { "_mask", 0x9, System.Object }
+          },
+          methods = {
+            { "SetEditorDebug", 0x10E, SetEditorDebug, System.Boolean },
+            { "ToggleEditorDebug", 0x8E, ToggleEditorDebug, System.Boolean }
+          },
           class = { 0xE }
         }
       end
@@ -20301,6 +20757,7 @@ System.namespace("", function (namespace)
   -- 
   -- </summary>
   namespace.class("Gui", function (namespace)
+    local GetNode1
     -- <summary>
     -- </summary>
     namespace.class("layout_changed_message", function (namespace)
@@ -20335,9 +20792,18 @@ System.namespace("", function (namespace)
       }
       return class
     end)
+    GetNode1 = function (id, TNode)
+      local node = TNode()
+      node:__assignproxy__(gui.get_node(id))
+      return node
+    end
     return {
+      GetNode1 = GetNode1,
       __metadata__ = function (out)
         return {
+          methods = {
+            { "GetNode", 0x1018E, GetNode1, function (TNode) return out.types.Hash, TNode end }
+          },
           class = { 0xE }
         }
       end
@@ -20487,9 +20953,26 @@ System.namespace("", function (namespace)
   -- 
   -- </summary>
   namespace.class("Math", function (namespace)
+    local Huge, PI, TAU, static
+    static = function (this)
+      Huge = math.huge
+      this.Huge = Huge
+      PI = math.pi
+      this.PI = PI
+      TAU = (2*math.pi)
+      this.TAU = TAU
+    end
     return {
+      static = static,
       __metadata__ = function (out)
         return {
+          fields = {
+            { "Huge", 0xE, System.Double }
+          },
+          properties = {
+            { "PI", 0xE, System.Double },
+            { "TAU", 0xE, System.Double }
+          },
           class = { 0xE }
         }
       end
@@ -20510,8 +20993,8 @@ System.import(function (out)
 end)
 System.namespace("", function (namespace)
   namespace.class("Message", function (namespace)
-    local typeToHashLookup, postMessage, postMessage1, postMessage2, postMessage3, postMessage4, postMessage5, postMessage6, 
-    IsMessage, IsMessage1, static
+    local typeToHashLookup, postMessage, postMessage1, postMessage2, postMessage3, postMessage4, postMessage5, IsMessage, 
+    IsMessage1, static
     static = function (this)
       typeToHashLookup = DictTypeHash()
     end
@@ -20519,22 +21002,19 @@ System.namespace("", function (namespace)
       msg.post(id,code,data:ToTable())
     end
     postMessage1 = function (id, code, data)
-      post4(id, code, data:ToTable())
+      msg.post(id,code,data:ToTable())
     end
     postMessage2 = function (id, code, data)
-      post5(id, code, data:ToTable())
+      msg.post(id,code,data:ToTable())
     end
     postMessage3 = function (id, message)
       msg.post(id,message:FetchCode(),message:ToTable())
     end
     postMessage4 = function (id, message)
-      post5(id, message:FetchCode(), message:ToTable())
+      msg.post(id,message:FetchCode(),message:ToTable())
     end
     postMessage5 = function (id, message)
-      post4(id, message:FetchCode(), message:ToTable())
-    end
-    postMessage6 = function (id, message, T)
-      msg.post(id,System.typeof(T):getName(),message:ToTable())
+      msg.post(id,message:FetchCode(),message:ToTable())
     end
     IsMessage = function (message_id, message, expectedCode, messageImpl, T)
       if message_id == expectedCode then
@@ -20575,7 +21055,6 @@ System.namespace("", function (namespace)
       postMessage3 = postMessage3,
       postMessage4 = postMessage4,
       postMessage5 = postMessage5,
-      postMessage6 = postMessage6,
       IsMessage = IsMessage,
       IsMessage1 = IsMessage1,
       static = static,
@@ -20592,8 +21071,7 @@ System.namespace("", function (namespace)
             { "postMessage", 0x30E, postMessage2, out.types.Hash, System.String, out.types.ILuaTableSerializable },
             { "postMessage", 0x20E, postMessage3, System.String, out.MessageImplementation },
             { "postMessage", 0x20E, postMessage4, out.types.Hash, out.MessageImplementation },
-            { "postMessage", 0x20E, postMessage5, out.types.Url, out.MessageImplementation },
-            { "postMessage", 0x1020E, postMessage6, function (T) return System.String, T end }
+            { "postMessage", 0x20E, postMessage5, out.types.Url, out.MessageImplementation }
           },
           class = { 0xE }
         }
@@ -20690,6 +21168,32 @@ System.namespace("", function (namespace)
     return {
       __metadata__ = function (out)
         return {
+          class = { 0xE }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("", function (namespace)
+  namespace.class("OS", function (namespace)
+    local Shutdown
+    -- <summary>
+    -- Safely shuts the game down.  Use exit() if an immediate force exit is needed
+    -- </summary>
+    Shutdown = function ()
+      msg.post("@system:", "exit", {code = 0})
+    end
+    return {
+      Shutdown = Shutdown,
+      __metadata__ = function (out)
+        return {
+          methods = {
+            { "Shutdown", 0xE, Shutdown }
+          },
           class = { 0xE }
         }
       end
@@ -21219,12 +21723,18 @@ end)
 end
 do
 local System = System
+local support
+System.import(function (out)
+  support = out.support
+end)
 System.namespace("", function (namespace)
   -- <summary>
   -- Sound API documentation
   -- 
   -- </summary>
   namespace.class("Sound", function (namespace)
+    local Play, Play1, Play2, Play3, Play4, Play5, Stop, Pause, 
+    Unpause, SetGain, SetPan, class
     -- <summary>
     -- </summary>
     namespace.class("play_sound_message", function (namespace)
@@ -21363,13 +21873,121 @@ System.namespace("", function (namespace)
       }
       return class
     end)
-    return {
+    Play = function (this, sound)
+      return System.ToInt32(sound.play(sound))
+    end
+    Play1 = function (this, sound)
+      return System.ToInt32(sound.play(sound))
+    end
+    Play2 = function (this, sound)
+      return System.ToInt32(sound.play(sound))
+    end
+    Play3 = function (this, sound, delay, gain, pan, speed, onCompleteCallback)
+      local table = {}
+      table["delay"] = delay
+      table["gain"] = gain
+      table["pan"] = pan
+      table["speed"] = speed
+
+      if onCompleteCallback ~= nil then
+        local callback
+        callback = function (o, hash, arg3, arg4)
+          onCompleteCallback(this, hash, arg3:get("play_id"), arg4)
+        end
+
+        return System.ToInt32(sound.play(sound, table, callback))
+      else
+        return System.ToInt32(sound.play(sound, table))
+      end
+    end
+    Play4 = function (this, sound, delay, gain, pan, speed, onCompleteCallback)
+      local table = {}
+      table["delay"] = delay
+      table["gain"] = gain
+      table["pan"] = pan
+      table["speed"] = speed
+
+      if onCompleteCallback ~= nil then
+        local callback
+        callback = function (o, hash, arg3, arg4)
+          onCompleteCallback(this, hash, arg3:get("play_id"), arg4)
+        end
+
+        return System.ToInt32(sound.play(sound, table, callback))
+      else
+        return System.ToInt32(sound.play(sound, table))
+      end
+    end
+    Play5 = function (this, sound, delay, gain, pan, speed, onCompleteCallback)
+      local table = {}
+      table["delay"] = delay
+      table["gain"] = gain
+      table["pan"] = pan
+      table["speed"] = speed
+
+      if onCompleteCallback ~= nil then
+        local callback
+        callback = function (o, hash, arg3, arg4)
+          onCompleteCallback(this, hash, arg3:get("play_id"), arg4)
+        end
+
+        return System.ToInt32(sound.play(sound, table, callback))
+      else
+        return System.ToInt32(sound.play(sound, table))
+      end
+    end
+    Stop = function (this)
+      sound.stop(support.BuiltInComponentBase.op_Implicit(this))
+    end
+    Pause = function (this, shouldPause)
+      sound.pause(support.BuiltInComponentBase.op_Implicit(this), shouldPause)
+    end
+    Unpause = function (this)
+      sound.pause(support.BuiltInComponentBase.op_Implicit(this), false)
+    end
+    SetGain = function (this, gain)
+      sound.set_gain(support.BuiltInComponentBase.op_Implicit(this), gain)
+    end
+    SetPan = function (this, pan)
+      sound.set_pan(support.BuiltInComponentBase.op_Implicit(this), pan)
+    end
+    class = {
+      base = function (out)
+        return {
+          out.support.BuiltInComponentBase
+        }
+      end,
+      Play = Play,
+      Play1 = Play1,
+      Play2 = Play2,
+      Play3 = Play3,
+      Play4 = Play4,
+      Play5 = Play5,
+      Stop = Stop,
+      Pause = Pause,
+      Unpause = Unpause,
+      SetGain = SetGain,
+      SetPan = SetPan,
       __metadata__ = function (out)
         return {
-          class = { 0xE }
+          methods = {
+            { "Pause", 0x106, Pause, System.Boolean },
+            { "Play", 0x186, Play, System.String, System.Int32 },
+            { "Play", 0x186, Play1, out.types.Hash, System.Int32 },
+            { "Play", 0x186, Play2, out.types.Url, System.Int32 },
+            { "Play", 0x686, Play3, System.String, System.Double, System.Double, System.Double, System.Double, System.Delegate(class, out.types.Hash, System.Int32, out.types.Url, System.Void), System.Int32 },
+            { "Play", 0x686, Play4, out.types.Hash, System.Double, System.Double, System.Double, System.Double, System.Delegate(class, out.types.Hash, System.Int32, out.types.Url, System.Void), System.Int32 },
+            { "Play", 0x686, Play5, out.types.Url, System.Double, System.Double, System.Double, System.Double, System.Delegate(class, out.types.Hash, System.Int32, out.types.Url, System.Void), System.Int32 },
+            { "SetGain", 0x106, SetGain, System.Double },
+            { "SetPan", 0x106, SetPan, System.Double },
+            { "Stop", 0x6, Stop },
+            { "Unpause", 0x6, Unpause }
+          },
+          class = { 0x6 }
         }
       end
     }
+    return class
   end)
 end)
 
@@ -21458,30 +22076,17 @@ System.namespace("", function (namespace)
       return class
     end)
     getFlipHorizontal = function (this)
-      if this.IsCachingEnabled then
-        return this._cachedFlipHorizontal
-      end
-
-      System.throw(System.NotImplementedException("defold API does not provide for querying a sprite's flip state"))
+      return this._cachedFlipHorizontal
     end
     setFlipHorizontal = function (this, value)
-      if this.IsCachingEnabled then
-        this._cachedFlipHorizontal = value
-      end
-
+      this._cachedFlipHorizontal = value
       sprite.set_hflip(support.BuiltInComponentBase.op_Implicit(this), value)
     end
     getFlipVertical = function (this)
-      if this.IsCachingEnabled then
-        return this._cachedFlipVertical
-      end
-
-      System.throw(System.NotImplementedException("defold API does not provide for querying a sprite's flip state"))
+      return this._cachedFlipVertical
     end
     setFlipVertical = function (this, value)
-      if this.IsCachingEnabled then
-        this._cachedFlipVertical = value
-      end
+      this._cachedFlipVertical = value
 
       sprite.set_vflip(support.BuiltInComponentBase.op_Implicit(this), value)
     end
@@ -21898,25 +22503,26 @@ System.namespace("", function (namespace)
   -- 
   -- </summary>
   namespace.class("Tilemap", function (namespace)
-    local getBounds, GetTile, GetTile1, SetTile, SetTile1, SetTile2, SetTile3, ValidateCachedBounds, 
+    local getBounds, GetBounds, GetTile, GetTile1, SetTile, SetTile1, SetTile2, SetTile3, 
     SetLayerVisible, SetLayerVisible1
     getBounds = function (this)
-      if this.IsCachingEnabled then
-        if this._cachedBounds ~= nil then
-          return this._cachedBounds
-        end
-      end
-
-
       local default, y, w, h = tilemap.get_bounds(support.BuiltInComponentBase.op_Implicit(this))
       local x = default
       local returnVal = types.Rect(x, y, w, h)
-
-      if this.IsCachingEnabled then
-        this._cachedBounds = returnVal
-      end
-
       return returnVal
+    end
+    -- <summary>
+    -- Fetches the bounds without allocating memory
+    -- </summary>
+    -- <param name="x"></param>
+    -- <param name="y"></param>
+    -- <param name="width"></param>
+    -- <param name="height"></param>
+    GetBounds = function (this, x, y, width, height)
+      local default
+      default, y, width, height = tilemap.get_bounds(support.BuiltInComponentBase.op_Implicit(this))
+      x = default
+      return x, y, width, height
     end
     GetTile = function (this, x, y, layer)
       return System.ToInt32(tilemap.get_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y))
@@ -21925,31 +22531,16 @@ System.namespace("", function (namespace)
       return System.ToInt32(tilemap.get_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y))
     end
     SetTile = function (this, x, y, tile, layer)
-      ValidateCachedBounds(this, x, y)
       tilemap.set_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y, tile)
     end
     SetTile1 = function (this, x, y, tile, layer, transformBitmask)
-      ValidateCachedBounds(this, x, y)
       tilemap.set_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y, tile, transformBitmask)
     end
     SetTile2 = function (this, x, y, tile, layer)
-      ValidateCachedBounds(this, x, y)
       tilemap.set_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y, tile)
     end
     SetTile3 = function (this, x, y, tile, layer, transformBitmask)
-      ValidateCachedBounds(this, x, y)
       tilemap.set_tile(support.BuiltInComponentBase.op_Implicit(this), layer, x, y, tile, transformBitmask)
-    end
-    ValidateCachedBounds = function (this, x, y)
-      if this.IsCachingEnabled then
-        if this._cachedBounds ~= nil then
-          --If we're setting a tile outside the cached boundaries,
-          --clear the cache so the next request will re-fetch.
-          if not this._cachedBounds:InRect(x, y) then
-            this._cachedBounds = nil
-          end
-        end
-      end
     end
     SetLayerVisible = function (this, layer, visible)
       tilemap.set_visible(support.BuiltInComponentBase.op_Implicit(this), layer, visible)
@@ -21964,6 +22555,7 @@ System.namespace("", function (namespace)
         }
       end,
       getBounds = getBounds,
+      GetBounds = GetBounds,
       GetTile = GetTile,
       GetTile1 = GetTile1,
       SetTile = SetTile,
@@ -21974,13 +22566,11 @@ System.namespace("", function (namespace)
       SetLayerVisible1 = SetLayerVisible1,
       __metadata__ = function (out)
         return {
-          fields = {
-            { "_cachedBounds", 0x1, out.types.Rect }
-          },
           properties = {
             { "Bounds", 0x206, out.types.Rect, getBounds }
           },
           methods = {
+            { "GetBounds", 0x406, GetBounds, System.Double, System.Double, System.Double, System.Double },
             { "GetTile", 0x386, GetTile, System.Int32, System.Int32, System.String, System.Int32 },
             { "GetTile", 0x386, GetTile1, System.Int32, System.Int32, out.types.Hash, System.Int32 },
             { "SetLayerVisible", 0x206, SetLayerVisible, System.String, System.Boolean },
@@ -21988,8 +22578,7 @@ System.namespace("", function (namespace)
             { "SetTile", 0x406, SetTile, System.Int32, System.Int32, System.Int32, System.String },
             { "SetTile", 0x506, SetTile1, System.Int32, System.Int32, System.Int32, System.String, System.Int32 },
             { "SetTile", 0x406, SetTile2, System.Int32, System.Int32, System.Int32, out.types.Hash },
-            { "SetTile", 0x506, SetTile3, System.Int32, System.Int32, System.Int32, out.types.Hash, System.Int32 },
-            { "ValidateCachedBounds", 0x201, ValidateCachedBounds, System.Int32, System.Int32 }
+            { "SetTile", 0x506, SetTile3, System.Int32, System.Int32, System.Int32, out.types.Hash, System.Int32 }
           },
           class = { 0x6 }
         }
@@ -22199,6 +22788,197 @@ end)
 end
 do
 local System = System
+local support
+System.import(function (out)
+  support = out.support
+end)
+System.namespace("support", function (namespace)
+  namespace.class("GameObjectReference", function (namespace)
+    local getPosition, setPosition, getRotation, setRotation, getScale, setScale, getUniformScale, getWorldPosition, 
+    getWorldRotation, getWorldScale, getWorldScaleUniform, getWorldTransform, GetProperty, GetProperty1, GetProperty2, SetProperty, 
+    SetProperty1, SetProperty2, Delete, Component, class, __ctor__
+    __ctor__ = function (this, locatorUrl)
+      this.LocatorUrl = locatorUrl
+    end
+    getPosition = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_position()
+      end
+      return go.get_position(this.LocatorUrl)
+    end
+    setPosition = function (this, value)
+      if class.CurrentGameObject == this then
+        go.set_position(value)
+      else
+        go.set_position(value, this.LocatorUrl)
+      end
+    end
+    getRotation = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_rotation()
+      end
+      return go.get_rotation(this.LocatorUrl)
+    end
+    setRotation = function (this, value)
+      if class.CurrentGameObject == this then
+        go.set_rotation(value)
+      else
+        go.set_rotation(value, this.LocatorUrl)
+      end
+    end
+    getScale = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_scale()
+      end
+      return go.get_scale(this.LocatorUrl)
+    end
+    setScale = function (this, value)
+      if class.CurrentGameObject == this then
+        go.set_scale(value)
+      else
+        go.set_scale(value, this.LocatorUrl)
+      end
+    end
+    getUniformScale = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_scale_uniform()
+      end
+      return go.get_scale_uniform(this.LocatorUrl)
+    end
+    getWorldPosition = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_world_position()
+      end
+      return go.get_world_position(this.LocatorUrl)
+    end
+    getWorldRotation = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_world_rotation()
+      end
+      return go.get_world_rotation(this.LocatorUrl)
+    end
+    getWorldScale = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_world_scale()
+      end
+      return go.get_world_scale(this.LocatorUrl)
+    end
+    getWorldScaleUniform = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_world_scale_uniform()
+      end
+      return go.get_world_scale_uniform(this.LocatorUrl)
+    end
+    getWorldTransform = function (this)
+      if class.CurrentGameObject == this then
+        return go.get_world_transform()
+      end
+      return go.get_world_transform(this.LocatorUrl)
+    end
+    GetProperty = function (this, property, T)
+      return go.get(this.LocatorUrl, property)
+    end
+    GetProperty1 = function (this, property, T)
+      return go.get(this.LocatorUrl, property)
+    end
+    GetProperty2 = function (this, property, T)
+      return go.get(this.LocatorUrl, property)
+    end
+    SetProperty = function (this, property, value, T)
+      Go.set(this.LocatorUrl, property, value)
+    end
+    SetProperty1 = function (this, property, value, T)
+      go.set(this.LocatorUrl, property, value)
+    end
+    SetProperty2 = function (this, property, value, T)
+      Go.set(this.LocatorUrl, property, value)
+    end
+    Delete = function (this)
+      this.isDestroyed = true
+      go.delete(this.LocatorUrl)
+    end
+    -- <summary>
+    -- A convenience shortcut for Component.At that handles fetching the Component relative
+    -- to this gameobject.
+    -- </summary>
+    -- <param name="hash"></param>
+    -- <typeparam name="T"></typeparam>
+    -- <returns></returns>
+    Component = function (this, hash, T)
+      local targetUrl = msg.url()
+      targetUrl.socket = this.LocatorUrl.socket
+      targetUrl.path = this.LocatorUrl.path
+      targetUrl.fragment = hash
+
+      return support.Component.At(support.Locator.AtUrl(targetUrl), T)
+    end
+    class = {
+      isDestroyed = false,
+      getPosition = getPosition,
+      setPosition = setPosition,
+      getRotation = getRotation,
+      setRotation = setRotation,
+      getScale = getScale,
+      setScale = setScale,
+      getUniformScale = getUniformScale,
+      getWorldPosition = getWorldPosition,
+      getWorldRotation = getWorldRotation,
+      getWorldScale = getWorldScale,
+      getWorldScaleUniform = getWorldScaleUniform,
+      getWorldTransform = getWorldTransform,
+      GetProperty = GetProperty,
+      GetProperty1 = GetProperty1,
+      GetProperty2 = GetProperty2,
+      SetProperty = SetProperty,
+      SetProperty1 = SetProperty1,
+      SetProperty2 = SetProperty2,
+      Delete = Delete,
+      Component = Component,
+      __ctor__ = __ctor__,
+      __metadata__ = function (out)
+        return {
+          properties = {
+            { "CurrentGameObject", 0xE, class },
+            { "LocatorUrl", 0x6, out.types.Url },
+            { "Position", 0x106, out.types.Vector3, getPosition, setPosition },
+            { "Rotation", 0x106, out.types.Quaternion, getRotation, setRotation },
+            { "Scale", 0x106, out.types.Vector3, getScale, setScale },
+            { "UniformScale", 0x206, System.Double, getUniformScale },
+            { "WorldPosition", 0x206, out.types.Vector3, getWorldPosition },
+            { "WorldRotation", 0x206, out.types.Quaternion, getWorldRotation },
+            { "WorldScale", 0x206, out.types.Vector3, getWorldScale },
+            { "WorldScaleUniform", 0x206, System.Double, getWorldScaleUniform },
+            { "WorldTransform", 0x206, out.types.Matrix4, getWorldTransform }
+          },
+          fields = {
+            { "isDestroyed", 0x6, System.Boolean }
+          },
+          methods = {
+            { ".ctor", 0x106, nil, out.types.Url },
+            { "Component", 0x10186, Component, function (T) return out.types.Hash, T end },
+            { "Delete", 0x6, Delete },
+            { "GetProperty", 0x10186, GetProperty, function (T) return out.types.__Hash2, T end },
+            { "GetProperty", 0x10186, GetProperty1, function (T) return out.types.__Hash3, System.String end },
+            { "GetProperty", 0x10186, GetProperty2, function (T) return out.types.Hash, T end },
+            { "SetProperty", 0x10206, SetProperty, function (T) return out.types.__Hash2, T end },
+            { "SetProperty", 0x10206, SetProperty1, function (T) return out.types.__Hash3, System.String end },
+            { "SetProperty", 0x10206, SetProperty2, function (T) return out.types.Hash, T end }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+    return class
+  end)
+end)
+
+end
+do
+local System = System
+local support
+System.import(function (out)
+  support = out.support
+end)
 System.namespace("support", function (namespace)
   namespace.class("GameObjectScript", function (namespace)
     return {
@@ -22220,19 +23000,18 @@ System.namespace("support", function (namespace)
   -- </summary>
   namespace.class("GameObjectScript_1", function (namespace)
     return function (TProps)
-      local getLocator, RequestInput, ReleaseInput, init, final, update, fixed_update, on_message, 
-      on_input, on_reload, __ctor__
+      local getLocatorUrl, getGameobject, init, final, update, fixed_update, on_message, on_input, 
+      on_reload, __ctor__
       __ctor__ = function (this)
-        this.Locator = msg.url()
+        this.LocatorUrl = msg.url()
       end
-      getLocator = System.property("Locator", true)
-      RequestInput = function (this)
-        msg.post('.', 'acquire_input_focus')
-        this.IsInputFocusHeld = true
-      end
-      ReleaseInput = function (this)
-        this.IsInputFocusHeld = false
-        msg.post('.', 'release_input_focus')
+      getLocatorUrl = System.property("LocatorUrl", true)
+      getGameobject = function (this)
+        if this._gameObjectReference == nil then
+          this._gameObjectReference = support.GameObjectReference(msg.url(this.LocatorUrl.socket, this.LocatorUrl.path, ""))
+        end
+
+        return this._gameObjectReference
       end
       -- <summary>
       -- Called when a script component is initialized.
@@ -22249,6 +23028,7 @@ System.namespace("support", function (namespace)
       -- or release user input focus (see `release_input_focus`).
       -- </summary>
       final = function (this)
+        support.Component.Unregister(this.LocatorUrl)
       end
       -- <summary>
       -- Called every frame to update the script component.
@@ -22314,10 +23094,8 @@ System.namespace("support", function (namespace)
             out.support.IUserComponent
           }
         end,
-        getLocator = getLocator,
-        IsInputFocusHeld = false,
-        RequestInput = RequestInput,
-        ReleaseInput = ReleaseInput,
+        getLocatorUrl = getLocatorUrl,
+        getGameobject = getGameobject,
         init = init,
         final = final,
         update = update,
@@ -22328,19 +23106,21 @@ System.namespace("support", function (namespace)
         __ctor__ = __ctor__,
         __metadata__ = function (out)
           return {
+            fields = {
+              { "_gameObjectReference", 0x1, out.support.GameObjectReference },
+              { "_gameObjectUrl", 0x1, out.types.Url }
+            },
             properties = {
-              { "IsInputFocusHeld", 0x3, System.Boolean },
-              { "Locator", 0x206, out.types.Url, getLocator }
+              { "Gameobject", 0x206, out.support.GameObjectReference, getGameobject },
+              { "LocatorUrl", 0x206, out.types.Url, getLocatorUrl }
             },
             methods = {
               { ".ctor", 0x3, nil },
-              { "ReleaseInput", 0x3, ReleaseInput },
-              { "RequestInput", 0x3, RequestInput },
               { "final", 0x3, final },
               { "fixed_update", 0x103, fixed_update, System.Single },
               { "init", 0x3, init },
               { "on_input", 0x283, on_input, out.types.Hash, System.Object, System.Boolean },
-              { "on_message", 0x303, on_message, out.types.Hash, System.Object, System.Object },
+              { "on_message", 0x303, on_message, out.types.Hash, System.Object, out.types.Hash },
               { "on_reload", 0x3, on_reload },
               { "update", 0x103, update, System.Single }
             },
@@ -22391,12 +23171,12 @@ System.namespace("support", function (namespace)
   -- </summary>
   namespace.class("GUIScript_1", function (namespace)
     return function (TProps)
-      local getLocator, init, final, update, fixed_update, on_message, on_input, on_reload, 
-      __ctor__
+      local getLocatorUrl, init, final, update, fixed_update, on_message, on_input, on_reload, 
+      GetNode1, __ctor__
       __ctor__ = function (this)
-        this.Locator = msg.url()
+        this.LocatorUrl = msg.url()
       end
-      getLocator = System.property("Locator", true)
+      getLocatorUrl = System.property("LocatorUrl", true)
       -- <summary>
       -- Called when a script component is initialized.
       -- This is a callback-function, which is called by the engine when a script component is initialized. It can be used
@@ -22470,6 +23250,11 @@ System.namespace("support", function (namespace)
       -- </summary>
       on_reload = function (this)
       end
+      GetNode1 = function (this, id, TNode)
+        local node = TNode()
+        node:__assignproxy__(gui.get_node(id))
+        return node
+      end
       return {
         base = function (out)
           return {
@@ -22477,7 +23262,7 @@ System.namespace("support", function (namespace)
             out.support.IUserComponent
           }
         end,
-        getLocator = getLocator,
+        getLocatorUrl = getLocatorUrl,
         init = init,
         final = final,
         update = update,
@@ -22485,19 +23270,21 @@ System.namespace("support", function (namespace)
         on_message = on_message,
         on_input = on_input,
         on_reload = on_reload,
+        GetNode1 = GetNode1,
         __ctor__ = __ctor__,
         __metadata__ = function (out)
           return {
             properties = {
-              { "Locator", 0x206, out.types.Url, getLocator }
+              { "LocatorUrl", 0x206, out.types.Url, getLocatorUrl }
             },
             methods = {
               { ".ctor", 0x3, nil },
+              { "GetNode", 0x10183, GetNode1, function (TNode) return out.types.Hash, TNode end },
               { "final", 0x3, final },
               { "fixed_update", 0x103, fixed_update, System.Single },
               { "init", 0x3, init },
               { "on_input", 0x283, on_input, out.types.Hash, System.Object, System.Boolean },
-              { "on_message", 0x303, on_message, out.types.Hash, System.Object, System.Object },
+              { "on_message", 0x303, on_message, out.types.Hash, System.Object, out.types.Hash },
               { "on_reload", 0x3, on_reload },
               { "update", 0x103, update, System.Single }
             },
@@ -22612,9 +23399,17 @@ local System = System
 System.namespace("support", function (namespace)
   namespace.class("ScriptPropertyHost_1", function (namespace)
     return function (TProps)
-      local AssignProperties
+      local AssignProperties, RequestInput, ReleaseInput
       AssignProperties = function (this, prop)
         this.Properties = prop
+      end
+      RequestInput = function (this)
+        msg.post('.', 'acquire_input_focus')
+        this.IsInputFocusHeld = true
+      end
+      ReleaseInput = function (this)
+        this.IsInputFocusHeld = false
+        msg.post('.', 'release_input_focus')
       end
       return {
         base = function (out)
@@ -22622,14 +23417,20 @@ System.namespace("support", function (namespace)
             out.support.GeneratedScript
           }
         end,
+        IsInputFocusHeld = false,
         AssignProperties = AssignProperties,
+        RequestInput = RequestInput,
+        ReleaseInput = ReleaseInput,
         __metadata__ = function (out)
           return {
             properties = {
+              { "IsInputFocusHeld", 0x3, System.Boolean },
               { "Properties", 0x3, TProps }
             },
             methods = {
-              { "AssignProperties", 0x103, AssignProperties, TProps }
+              { "AssignProperties", 0x103, AssignProperties, TProps },
+              { "ReleaseInput", 0x3, ReleaseInput },
+              { "RequestInput", 0x3, RequestInput }
             },
             class = { 0x106, TProps }
           }
@@ -22711,8 +23512,64 @@ System.namespace("types", function (namespace)
       op_Implicit1 = op_Implicit1,
       __metadata__ = function (out)
         return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+
+
+
+  -- <summary>
+  -- //Used so we can fool the C# compiler into allowing us more overrides.  Hash is the actual implementation and should be
+  -- used in methods where possible.
+  -- </summary>
+  namespace.class("__Hash2", function (namespace)
+    local op_Implicit1, ToHash
+    op_Implicit1 = function (v)
+      --Doesn't actually get called.  Instead the template is injected.  But we can't extern operators.
+      return op_Implicit(hash(v))
+    end
+    ToHash = function (this)
+      return nil
+      --Not actually called.  
+    end
+    return {
+      op_Implicit1 = op_Implicit1,
+      ToHash = ToHash,
+      __metadata__ = function (out)
+        return {
           methods = {
-            { ".ctor", 0x106, nil, System.String }
+            { "ToHash", 0x86, ToHash, out.types.Hash }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+
+
+  -- <summary>
+  -- //Used so we can fool the C# compiler into allowing us more overrides.  Hash is the actual implementation and should be
+  -- used in methods where possible.
+  -- </summary>
+  namespace.class("__Hash3", function (namespace)
+    local op_Implicit1, ToHash
+    op_Implicit1 = function (v)
+      --Doesn't actually get called.  Instead the template is injected.  But we can't extern operators.
+      return op_Implicit(hash(v))
+    end
+    ToHash = function (this)
+      return nil
+      --Not actually called.  
+    end
+    return {
+      op_Implicit1 = op_Implicit1,
+      ToHash = ToHash,
+      __metadata__ = function (out)
+        return {
+          methods = {
+            { "ToHash", 0x86, ToHash, out.types.Hash }
           },
           class = { 0x6 }
         }
@@ -22745,6 +23602,23 @@ System.namespace("types", function (namespace)
   -- <summary>
   -- </summary>
   namespace.interface("ILuaTableSerializable", function ()
+    return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+end)
+
+end
+do
+local System = System
+System.namespace("types", function (namespace)
+  -- <summary>
+  -- </summary>
+  namespace.interface("ILuaType", function ()
     return {
       __metadata__ = function (out)
         return {
@@ -22811,7 +23685,8 @@ System.namespace("types", function (namespace)
     return {
       base = function (out)
         return {
-          out.types.LuaTableOf_2(out.types.LuaType, out.types.LuaType)
+          out.types.LuaTableOf_2(out.types.LuaType, out.types.LuaType),
+          out.types.ILuaType
         }
       end,
       __metadata__ = function (out)
@@ -22944,6 +23819,11 @@ System.namespace("types", function (namespace)
   -- </summary>
   namespace.class("Matrix4", function (namespace)
     return {
+      base = function (out)
+        return {
+          out.types.ILuaType
+        }
+      end,
       x = 0,
       y = 0,
       u = 0,
@@ -22966,11 +23846,83 @@ end)
 end
 do
 local System = System
+local types
+System.import(function (out)
+  types = out.types
+end)
 System.namespace("types", function (namespace)
   -- <summary>
   -- </summary>
   namespace.class("Node", function (namespace)
     return {
+      __metadata__ = function (out)
+        return {
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+
+  namespace.class("NodeProxy", function (namespace)
+    local __assignproxy__, op_Implicit
+    __assignproxy__ = function (this, proxy)
+      this._proxy = proxy
+    end
+    op_Implicit = function (p)
+      return p._proxy
+    end
+    return {
+      __assignproxy__ = __assignproxy__,
+      op_Implicit = op_Implicit,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "_proxy", 0x1, out.types.Node }
+          },
+          methods = {
+            { "__assignproxy__", 0x104, __assignproxy__, out.types.Node }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+
+  namespace.class("TextNode", function (namespace)
+    local GetText, SetText
+    GetText = function (this)
+      return gui.get_text(types.NodeProxy.op_Implicit(this))
+    end
+    SetText = function (this, text)
+      gui.set_text(types.NodeProxy.op_Implicit(this), text)
+    end
+    return {
+      base = function (out)
+        return {
+          out.types.NodeProxy
+        }
+      end,
+      GetText = GetText,
+      SetText = SetText,
+      __metadata__ = function (out)
+        return {
+          methods = {
+            { "GetText", 0x86, GetText, System.String },
+            { "SetText", 0x106, SetText, System.String }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+  end)
+
+  namespace.class("ButtonNode", function (namespace)
+    return {
+      base = function (out)
+        return {
+          out.types.NodeProxy
+        }
+      end,
       __metadata__ = function (out)
         return {
           class = { 0x6 }
@@ -22988,6 +23940,11 @@ System.namespace("types", function (namespace)
   -- </summary>
   namespace.class("Quaternion", function (namespace)
     return {
+      base = function (out)
+        return {
+          out.types.ILuaType
+        }
+      end,
       x = 0,
       y = 0,
       z = 0,
@@ -23055,27 +24012,35 @@ System.namespace("types", function (namespace)
   -- <summary>
   -- </summary>
   namespace.class("Url", function (namespace)
-    local __ctor1__, __ctor2__
+    local __ctor1__, __ctor2__, __ctor3__
     __ctor1__ = function (this)
     end
     __ctor2__ = function (this, url)
     end
+    __ctor3__ = function (this, socket, path, fragment)
+    end
     return {
-      socket = 0,
+      base = function (out)
+        return {
+          out.types.ILuaType
+        }
+      end,
       __ctor__ = {
         __ctor1__,
-        __ctor2__
+        __ctor2__,
+        __ctor3__
       },
       __metadata__ = function (out)
         return {
           fields = {
             { "fragment", 0x6, out.types.Hash },
             { "path", 0x6, out.types.Hash },
-            { "socket", 0x6, System.Int32 }
+            { "socket", 0x6, out.types.Hash }
           },
           methods = {
             { ".ctor", 0x6, __ctor1__ },
-            { ".ctor", 0x106, __ctor2__, System.String }
+            { ".ctor", 0x106, __ctor2__, System.String },
+            { ".ctor", 0x306, __ctor3__, System.String, System.String, System.String }
           },
           class = { 0x6 }
         }
@@ -23096,14 +24061,19 @@ System.namespace("types", function (namespace)
       return nil
     end
     return {
+      base = function (out)
+        return {
+          out.types.ILuaType
+        }
+      end,
       x = 0,
       y = 0,
       op_Implicit = op_Implicit,
       __metadata__ = function (out)
         return {
           fields = {
-            { "x", 0x6, System.Single },
-            { "y", 0x6, System.Single }
+            { "x", 0x6, System.Double },
+            { "y", 0x6, System.Double }
           },
           class = { 0x6 }
         }
@@ -23120,6 +24090,11 @@ System.namespace("types", function (namespace)
   -- </summary>
   namespace.class("Vector3", function (namespace)
     return {
+      base = function (out)
+        return {
+          out.types.ILuaType
+        }
+      end,
       x = 0,
       y = 0,
       z = 0,
@@ -23145,6 +24120,11 @@ System.namespace("types", function (namespace)
   -- </summary>
   namespace.class("Vector4", function (namespace)
     return {
+      base = function (out)
+        return {
+          out.types.ILuaType
+        }
+      end,
       x = 0,
       y = 0,
       u = 0,
@@ -23152,10 +24132,10 @@ System.namespace("types", function (namespace)
       __metadata__ = function (out)
         return {
           fields = {
-            { "u", 0x6, System.Single },
-            { "v", 0x6, System.Single },
-            { "x", 0x6, System.Single },
-            { "y", 0x6, System.Single }
+            { "u", 0x6, System.Double },
+            { "v", 0x6, System.Double },
+            { "x", 0x6, System.Double },
+            { "y", 0x6, System.Double }
           },
           class = { 0x6 }
         }
@@ -23169,16 +24149,13 @@ do
 local System = System
 System.namespace("support", function (namespace)
   namespace.class("BuiltInComponentBase", function (namespace)
-    local getLocator, setLocator, AssignLocator, EnableCaching, op_Implicit
-    getLocator, setLocator = System.property("Locator")
+    local getLocatorUrl, setLocatorUrl, AssignLocator, op_Implicit
+    getLocatorUrl, setLocatorUrl = System.property("LocatorUrl")
     AssignLocator = function (this, locator)
-      this.Locator = locator:FetchUrl()
-    end
-    EnableCaching = function (this)
-      this.IsCachingEnabled = false
+      this.LocatorUrl = locator:FetchUrl()
     end
     op_Implicit = function (self)
-      return getLocator(self)
+      return getLocatorUrl(self)
     end
     return {
       base = function (out)
@@ -23186,21 +24163,17 @@ System.namespace("support", function (namespace)
           out.support.IBuiltInComponent
         }
       end,
-      IsCachingEnabled = false,
-      getLocator = getLocator,
-      setLocator = setLocator,
+      getLocatorUrl = getLocatorUrl,
+      setLocatorUrl = setLocatorUrl,
       AssignLocator = AssignLocator,
-      EnableCaching = EnableCaching,
       op_Implicit = op_Implicit,
       __metadata__ = function (out)
         return {
           properties = {
-            { "IsCachingEnabled", 0x6, System.Boolean },
-            { "Locator", 0x106, out.types.Url, getLocator, setLocator }
+            { "LocatorUrl", 0x106, out.types.Url, getLocatorUrl, setLocatorUrl }
           },
           methods = {
-            { "AssignLocator", 0x106, AssignLocator, out.support.ComponentLocator },
-            { "EnableCaching", 0x6, EnableCaching }
+            { "AssignLocator", 0x106, AssignLocator, out.support.Locator }
           },
           class = { 0x6 }
         }
@@ -23227,7 +24200,7 @@ System.namespace("support", function (namespace)
   -- Generic access for both builtin components and user components.
   -- </summary>
   namespace.class("Component", function (namespace)
-    local ComponentsByLocator, builtInType, userComponentType, Register, At, At1, AtUser, AtBuiltIn, 
+    local ComponentsByLocator, builtInType, userComponentType, Register, Unregister, At, AtUser, AtBuiltIn, 
     class, static
     namespace.class("ComponentRecord", function (namespace)
       local __ctor__
@@ -23260,23 +24233,19 @@ System.namespace("support", function (namespace)
       local newRecord = class.ComponentRecord(System.typeof(TComponent), data)
       ComponentsByLocator:AddKeyValue(locator, newRecord)
     end
+    Unregister = function (locator)
+      ComponentsByLocator:RemoveKey(locator)
+    end
     At = function (locator, TComponent)
       if builtInType:IsAssignableFrom(System.typeof(TComponent)) then
-        return AtBuiltIn(locator, true, TComponent)
+        return AtBuiltIn(locator, TComponent)
       end
+
       if userComponentType:IsAssignableFrom(System.typeof(TComponent)) then
         return AtUser(locator, TComponent)
       end
 
       pprint("Unhandled component type!  " .. System.typeof(TComponent):getName())
-      System.throw(System.NotImplementedException())
-    end
-    At1 = function (locator, cacheInternals, TComponent)
-      if builtInType:IsAssignableFrom(System.typeof(TComponent)) then
-        return AtBuiltIn(locator, cacheInternals, TComponent)
-      end
-
-      pprint("At called with caching parameter on non-builtin component type " .. System.typeof(TComponent):getName())
       System.throw(System.NotImplementedException())
     end
     -- <summary>
@@ -23313,33 +24282,22 @@ System.namespace("support", function (namespace)
     -- <returns></returns>
     -- <exception cref="InvalidCastException"></exception>
     -- <exception cref="KeyNotFoundException"></exception>
-    AtBuiltIn = function (locator, cacheInternals, TComponent)
-      local cache = cacheInternals
-
+    AtBuiltIn = function (locator, TComponent)
       local url = locator:FetchUrl()
 
-      local default, existingRecord = ComponentsByLocator:TryGetValue(url, nil)
-      if default then
-        if not existingRecord.type:IsAssignableTo(System.typeof(TComponent)) then
-          System.throw(System.InvalidCastException("Requesting component of type " .. System.typeof(TComponent):getName() .. ", but record for component is " .. existingRecord.type:getName()))
-        else
-          return existingRecord.data
-        end
-      else
-        local newComponent = TComponent()
-        newComponent:AssignLocator(locator)
-        Register(url, newComponent, TComponent)
-        if cache then
-          newComponent:EnableCaching()
-        end
-        return newComponent
-      end
+
+      --Built in components are not cached, because we cannot determine when they are cleared.
+
+      local newComponent = TComponent()
+      newComponent:AssignLocator(locator)
+      Register(url, newComponent, TComponent)
+      return newComponent
     end
     class = {
       DefaultToCaching = true,
       Register = Register,
+      Unregister = Unregister,
       At = At,
-      At1 = At1,
       static = static,
       __metadata__ = function (out)
         return {
@@ -23350,11 +24308,11 @@ System.namespace("support", function (namespace)
             { "userComponentType", 0x9, System.Type }
           },
           methods = {
-            { "At", 0x1018E, At, function (TComponent) return out.support.ComponentLocator, TComponent end },
-            { "At", 0x1028E, At1, function (TComponent) return out.support.ComponentLocator, System.Boolean, TComponent end },
-            { "AtBuiltIn", 0x10289, AtBuiltIn, function (TComponent) return out.support.ComponentLocator, System.Boolean, TComponent end },
-            { "AtUser", 0x10189, AtUser, function (TComponent) return out.support.ComponentLocator, TComponent end },
-            { "Register", 0x1020E, Register, function (TComponent) return out.types.Url, TComponent end }
+            { "At", 0x1018E, At, function (TComponent) return out.support.Locator, TComponent end },
+            { "AtBuiltIn", 0x10189, AtBuiltIn, function (TComponent) return out.support.Locator, TComponent end },
+            { "AtUser", 0x10189, AtUser, function (TComponent) return out.support.Locator, TComponent end },
+            { "Register", 0x1020E, Register, function (TComponent) return out.types.Url, TComponent end },
+            { "Unregister", 0x10E, Unregister, out.types.Url }
           },
           class = { 0xE }
         }
@@ -23523,6 +24481,59 @@ System.namespace("support", function (namespace)
 end)
 
 end
+do
+local System = System
+System.namespace("support", function (namespace)
+  namespace.class("Locator", function (namespace)
+    local FetchUrl, AtUrl, AtComponent, AtComponent1, class, __ctor__
+    __ctor__ = function (this, url)
+      this._url = url
+    end
+    FetchUrl = function (this)
+      return this._url
+    end
+    AtUrl = function (url)
+      return class(url)
+    end
+    AtComponent = function (componentName)
+      local url = msg.url()
+      url.path = go.get_id()
+      url.fragment = hash(componentName)
+      return class(url)
+    end
+    AtComponent1 = function (gameobjectPath, componentName)
+      local url = msg.url()
+      url.path = go.get_id(gameobjectPath)
+      url.fragment = hash(componentName)
+      return class(url)
+    end
+    class = {
+      FetchUrl = FetchUrl,
+      AtUrl = AtUrl,
+      AtComponent = AtComponent,
+      AtComponent1 = AtComponent1,
+      __ctor__ = __ctor__,
+      __metadata__ = function (out)
+        return {
+          fields = {
+            { "_url", 0x1, out.types.Url }
+          },
+          methods = {
+            { ".ctor", 0x101, nil, out.types.Url },
+            { "AtComponent", 0x18E, AtComponent, System.String, class },
+            { "AtComponent", 0x28E, AtComponent1, System.String, System.String, class },
+            { "AtUrl", 0x18E, AtUrl, out.types.Url, class },
+            { "FetchUrl", 0x86, FetchUrl, out.types.Url }
+          },
+          class = { 0x6 }
+        }
+      end
+    }
+    return class
+  end)
+end)
+
+end
 System.init({
   types = {
     "support.IComponent",
@@ -23530,17 +24541,19 @@ System.init({
     "support.IBuiltInComponent",
     "support.ScriptPropertyHost_1",
     "support.IUserComponent",
+    "support.AnimatableProperties",
     "types.ILuaTable",
     "types.ILuaTableSerializable",
     "support.BuiltInComponentBase",
-    "support.GUIScript_1",
-    "support.AnimatableProperties",
     "support.GameObjectScript_1",
+    "FPSProperties",
+    "support.GUIScript_1",
     "types.LuaTableBase",
     "MessageImplementation",
     "Camera",
     "CollectionFactory",
-    "Collectionproxy",
+    "CollectionProxy",
+    "FPS",
     "Go",
     "Gui",
     "support.GUIScript",
@@ -23552,10 +24565,14 @@ System.init({
     "Sound",
     "Sprite",
     "Sys",
+    "TankProperties",
+    "SpawnSettings",
     "attributes.PropertyProxyHandling",
     "support.Component",
+    "types.NodeProxy",
     "types.LuaTableOf_2",
     "types.LuaType",
+    "types.ILuaType",
     "AddScoreMessage",
     "Buffer",
     "Builtins",
@@ -23563,18 +24580,20 @@ System.init({
     "Camera.release_camera_focus_message",
     "Camera.set_camera_message",
     "CollectionFactory.CollectionFactoryCreateResult",
-    "Collectionproxy.async_load_message",
-    "Collectionproxy.disable_message",
-    "Collectionproxy.enable_message",
-    "Collectionproxy.final_message",
-    "Collectionproxy.init_message",
-    "Collectionproxy.load_message",
-    "Collectionproxy.proxy_loaded_message",
-    "Collectionproxy.proxy_unloaded_message",
-    "Collectionproxy.set_time_step_message",
-    "Collectionproxy.unload_message",
+    "CollectionProxy.async_load_message",
+    "CollectionProxy.disable_message",
+    "CollectionProxy.enable_message",
+    "CollectionProxy.final_message",
+    "CollectionProxy.init_message",
+    "CollectionProxy.load_message",
+    "CollectionProxy.proxy_loaded_message",
+    "CollectionProxy.proxy_unloaded_message",
+    "CollectionProxy.set_time_step_message",
+    "CollectionProxy.unload_message",
     "CommonInput",
     "Crash",
+    "Debug",
+    "FPS.SimpleMovingAverage",
     "Facebook",
     "Factory",
     "Go.acquire_input_focus_message",
@@ -23595,6 +24614,7 @@ System.init({
     "Message",
     "Model.model_animation_done_message",
     "Msg",
+    "OS",
     "Particlefx",
     "Physics.apply_force_message",
     "Physics.collision_response_message",
@@ -23626,6 +24646,9 @@ System.init({
     "Sys.stop_record_message",
     "Sys.toggle_physics_debug_message",
     "Sys.toggle_profile_message",
+    "Tank",
+    "TankCountMessage",
+    "TankSpawner",
     "Tilemap",
     "Timer",
     "Vmath",
@@ -23638,9 +24661,12 @@ System.init({
     "support.ComponentLocator",
     "support.ComponentReference",
     "support.DoNotGenerateAttribute",
+    "support.GameObjectReference",
     "support.ICachedData",
+    "support.Locator",
     "support.LuaTableSerializableExt",
     "types.BufferStream",
+    "types.ButtonNode",
     "types.DataBuffer",
     "types.GuiTextureType",
     "types.Hash",
@@ -23651,10 +24677,13 @@ System.init({
     "types.Node",
     "types.Quaternion",
     "types.Rect",
+    "types.TextNode",
     "types.Url",
     "types.Vector2",
     "types.Vector3",
-    "types.Vector4"
+    "types.Vector4",
+    "types.__Hash2",
+    "types.__Hash3"
   }
 })
 

@@ -1,0 +1,72 @@
+> Total time: 1.604000 s
+--------------------------------------------------------------------------------------
+| FILE                : FUNCTION                    : LINE   : TIME   : %     : #    |
+--------------------------------------------------------------------------------------
+| scripts/Tank.script : Anon                        :    17  : 0.2260 : 14.1  : 10000|
+| scripts/MainUI.gui_s: Anon                        :    14  : 0.1440 : 9.0   : 2006 |
+| scripts/out         : on_message                  : 19655  : 0.1310 : 8.2   : 2006 |
+| scripts/out         : IsMessage1                  : 20868  : 0.0970 : 6.0   : 6023 |
+| scripts/out         : typeof                      :  7386  : 0.0330 : 2.1   : 6027 |
+| scripts/out         : TryGetValue                 :  7966  : 0.0110 : 0.7   : 6023 |
+| scripts/out         : __add                       :  1037  : 0.0010 : 0.1   :   13 |
+| scripts/out         : get                         :  5415  : 0.0010 : 0.1   :    6 |
+| scripts/FPS.script  : Anon                        :    15  : 0.0010 : 0.1   :    6 |
+| scripts/out         : on_message                  : 19521  : 0.0010 : 0.1   :    5 |
+| scripts/TankSpawner.: Anon                        :    31  : 0.0010 : 0.1   :    5 |
+| builtins/render/defa: Anon                        :    71  : 0.0010 : 0.1   :    5 |
+| scripts/out         : update                      : 19169  : 0.0010 : 0.1   :    6 |
+| scripts/out         : Update                      : 19130  : 0.0010 : 0.1   :    6 |
+--------------------------------------------------------------------------------------
+| builtins/render/defa: get_projection              :    43  : ~      : ~     :    5 |
+| builtins/render/defa: Anon                        :   119  : ~      : ~     :    1 |
+| scripts/out         : __concat                    :  1026  : ~      : ~     :    1 |
+| scripts/out         : __div                       :    47  : ~      : ~     :    2 |
+| builtins/render/defa: get_projection              :    39  : ~      : ~     :    5 |
+| scripts/out         : __ctor__                    : 22613  : ~      : ~     :    1 |
+| scripts/out         : AssignProperties            : 23215  : ~      : ~     :    1 |
+| scripts/out         : GameObjectReference         :    59  : ~      : ~     :    1 |
+| scripts/out         : __ctor__                    : 22818  : ~      : ~     :    1 |
+| scripts/out         : Register                    : 23954  : ~      : ~     :    1 |
+| scripts/out         : __ctor__                    : 23929  : ~      : ~     :    1 |
+| main/luaprofiler    : stop                        :   225  : ~      : ~     :    1 |
+| scripts/out         : ComponentRecord             :    59  : ~      : ~     :    1 |
+| scripts/out         : TankCountMessage            :    59  : ~      : ~     :    1 |
+| scripts/out         : __ctor__                    : 19425  : ~      : ~     :    1 |
+| scripts/out         : SpawnTank                   : 19513  : ~      : ~     :    1 |
+| scripts/out         : base                        :   978  : ~      : ~     :    1 |
+| scripts/out         : Create                      : 20382  : ~      : ~     :    1 |
+| scripts/out         : op_Implicit                 :   961  : ~      : ~     :    1 |
+| scripts/out         : Tank                        :    59  : ~      : ~     :    1 |
+| scripts/out         : op_Implicit                 : 23879  : ~      : ~     :    1 |
+| scripts/Tank.script : Anon                        :     3  : ~      : ~     :    1 |
+| scripts/out         : __mod                       :    47  : ~      : ~     :    1 |
+| scripts/out         : __sub                       :    47  : ~      : ~     :    5 |
+| scripts/out         : Anon                        : 19221  : ~      : ~     :    1 |
+| scripts/out         : __index                     :   263  : ~      : ~     :    1 |
+| scripts/Player.scrip: Anon                        :    22  : ~      : ~     :    1 |
+| scripts/out         : FetchCode                   : 19594  : ~      : ~     :    2 |
+| scripts/out         : staticCtorSetBase           :   248  : ~      : ~     :    1 |
+| scripts/out         : setBase                     :   218  : ~      : ~     :    1 |
+| scripts/out         : metadata                    : 19079  : ~      : ~     :    1 |
+| scripts/out         : applyMetadata               :   205  : ~      : ~     :    1 |
+| scripts/out         : applyExtends                :   194  : ~      : ~     :    1 |
+| scripts/out         : static                      : 19061  : ~      : ~     :    1 |
+| scripts/out         : FetchCode                   : 19622  : ~      : ~     :   13 |
+| scripts/out         : AddKeyValue                 :  7812  : ~      : ~     :    4 |
+| scripts/out         : default                     :    47  : ~      : ~     :    3 |
+| scripts/out         : __ctor__                    :    46  : ~      : ~     :   16 |
+| scripts/out         : T                           :    59  : ~      : ~     :    3 |
+| scripts/out         : FetchCode                   : 19566  : ~      : ~     :    1 |
+| scripts/Player.scrip: Anon                        :    18  : ~      : ~     :    6 |
+| scripts/out         : update                      : 19502  : ~      : ~     :    6 |
+| scripts/TankSpawner.: Anon                        :    21  : ~      : ~     :    6 |
+| main/ui2script.gui_s: record                      :    11  : ~      : ~     :    5 |
+| main/ui2script.gui_s: Anon                        :    20  : ~      : ~     :    5 |
+| scripts/out         : set                         :  5426  : ~      : ~     :    6 |
+| scripts/out         : mod                         :   517  : ~      : ~     :    6 |
+| scripts/out         : update                      : 19241  : ~      : ~     :    6 |
+| scripts/out         : FPSChangeMessage            :    59  : ~      : ~     :   12 |
+| scripts/out         : ToTable                     : 20924  : ~      : ~     :   13 |
+| scripts/out         : postMessage3                : 20849  : ~      : ~     :   13 |
+| scripts/out         : ToTable                     : 23150  : ~      : ~     :   13 |
+--------------------------------------------------------------------------------------

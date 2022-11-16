@@ -1,0 +1,17 @@
+require "scripts.out"
+go.property("speed", 50)
+
+function init(self)
+	self.script = Tank()
+	self.script:AssignProperties(self)
+	support.Component.Register(self.script.LocatorUrl, self.script, Tank)
+end
+
+function final(self)
+	self.script:final()
+end
+
+function update(self, dt)
+	self.script:update(dt)
+end
+

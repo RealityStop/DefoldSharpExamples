@@ -1,0 +1,26 @@
+function init(self)
+
+	self.values = {}
+	self.index = 0
+	self.sum = 0
+	self.k = 60
+	for i = 1, self.k do
+		self.values[i] = 0
+	end
+
+	self.fpsNode = gui.get_node("fps1")
+end
+
+function record(self, dt)
+	self.sum = self.sum - self.values[self.index+1] + dt
+	self.values[self.index+1] = dt
+	self.index = math.fmod((self.index + 1),self.k)
+	return self.sum/self.k
+end
+
+
+
+function update(self, dt)
+	local fps = 1/record(self,dt)
+	gui.set_text(self.fpsNode, "fps: " .. fps)
+end
